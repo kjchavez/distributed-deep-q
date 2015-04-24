@@ -1,26 +1,35 @@
 # Test barista server
 import socket
-import struct
 import barista
 
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect(('127.0.0.1', 50001))
+class DummyClient:
+    def __init__(self, address, port):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect((address, port))
 
-msg = barista.GRAD_UPDATE
-totalsent = 0
-while totalsent < barista.MSG_LENGTH:
-    sent = sock.send(msg[totalsent:])
-    if sent == 0:
-        raise RuntimeError("socket connection broken")
-    totalsent = totalsent + sent
+    def send(self, msg):
+        msg_length = len(msg)
+        totalsent = 0
+        while totalsent < msg_length:
+            sent = self.sock.send(msg[totalsent:])
+            if sent == 0:
+                raise RuntimeError("socket connection broken")
+            totalsent = totalsent + sent
 
-response = ""
-while True:
-    chunk = sock.recv(1024)
-    if not chunk:
-        break
-    response += chunk
+    def recv(self, bufsize=1024):
+        response = ""
+        while True:
+            chunk = self.sock.recv(1024)
+            if not chunk:
+                break
+            response += chunk
+        return response
 
-sock.close()
+    def __del__(self):
+        self.sock.close()
+
+client = DummyClient('127.0.0.1', 50001)
+client.send(barista.GRAD_UPDATE)
+response = client.recv()
 print response
