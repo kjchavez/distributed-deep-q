@@ -1,3 +1,3 @@
 reading/
 barista/*.pyc
-barista/models/*/*.caffemodel
+models/*/*.caffemodel

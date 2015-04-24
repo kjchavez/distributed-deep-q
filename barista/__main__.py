@@ -2,6 +2,7 @@
 Barista serves as an interface to a long-running caffe process.
 """
 import os
+import sys
 import time
 import argparse
 import socket
@@ -52,7 +53,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("architecture")
     parser.add_argument("model")
-    parser.add_argument("solver")
+    parser.add_argument("--solver", default=None)
     parser.add_argument("--mode", default="cpu", choices=["cpu", "gpu"])
     parser.add_argument("--port", type=int, default=50001)
     parser.add_argument("--driver", default="127.0.0.1:5000")
@@ -65,6 +66,10 @@ def main():
         caffe.set_mode_gpu()
 
     if not os.path.isfile(args.model):
+        if not args.solver:
+            print "Error: Model does not exist. No solver specified."
+            sys.exit(1)
+
         print "Warning: model %s does not exist. Creating..."
         solver = SGDSolver(args.solver)
         solver.net.save(args.model)
