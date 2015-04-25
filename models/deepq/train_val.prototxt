@@ -30,11 +30,12 @@ layers {
   top: "reward"
   memory_data_param: {
     batch_size: 32
-    channels: 1
+    channels: 4
     height: 1
-    width: 4
+    width: 1
   }
 }
+####### Q Convolutional Neural Network ########
 layers {
   name: "Qconv1"
   type: CONVOLUTION
@@ -139,7 +140,7 @@ layers {
   }
 }
 layers {
-  name: "relu3"
+  name: "Qrelu3"
   type: RELU
   bottom: "Qconv3"
   top: "Qconv3"
@@ -192,10 +193,10 @@ layers {
   }
 }
 layers {
-  name: "Qfc5"
+  name: "Q_out"
   type: INNER_PRODUCT
   bottom: "Qfc4"
-  top: "Qfc5"
+  top: "Q_out"
   blobs_lr: 1
   blobs_lr: 2
   weight_decay: 1
@@ -212,10 +213,252 @@ layers {
     }
   }
 }
+######### P Convolutional Neural Network ##############
+layers {
+  name: "Pconv1"
+  type: CONVOLUTION
+  bottom: "next_state"
+  top: "Pconv1"
+  blobs_lr: 0
+  blobs_lr: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 7
+    pad: 3
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "Prelu1"
+  type: RELU
+  bottom: "Pconv1"
+  top: "Pconv1"
+}
+layers {
+  name: "Ppool1"
+  type: POOLING
+  bottom: "Pconv1"
+  top: "Ppool1"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+layers {
+  name: "Pconv2"
+  type: CONVOLUTION
+  bottom: "Ppool1"
+  top: "Pconv2"
+  blobs_lr: 0
+  blobs_lr: 0
+  convolution_param {
+    num_output: 64
+    kernel_size: 5
+    pad: 2
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layers {
+  name: "Prelu2"
+  type: RELU
+  bottom: "Pconv2"
+  top: "Pconv2"
+}
+layers {
+  name: "Ppool2"
+  type: POOLING
+  bottom: "Pconv2"
+  top: "Ppool2"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+layers {
+  name: "Pconv3"
+  type: CONVOLUTION
+  bottom: "Ppool2"
+  top: "Pconv3"
+  blobs_lr: 0
+  blobs_lr: 0
+  convolution_param {
+    num_output: 64
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "Prelu3"
+  type: RELU
+  bottom: "Pconv3"
+  top: "Pconv3"
+}
+layers {
+  name: "Ppool3"
+  type: POOLING
+  bottom: "Pconv3"
+  top: "Ppool3"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+layers {
+  name: "Pfc4"
+  type: INNER_PRODUCT
+  bottom: "Ppool3"
+  top: "Pfc4"
+  blobs_lr: 0
+  blobs_lr: 0
+  inner_product_param {
+    num_output: 512
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layers {
+  name: "Prelu4"
+  type: RELU
+  bottom: "Pfc4"
+  top: "Pfc4"
+}
+layers {
+  name: "Pdrop4"
+  type: DROPOUT
+  bottom: "Pfc4"
+  top: "Pfc4"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layers {
+  name: "P_out"
+  type: INNER_PRODUCT
+  bottom: "Pfc4"
+  top: "P_out"
+  blobs_lr: 0
+  blobs_lr: 0
+  inner_product_param {
+    num_output: 4
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+#### Mask Based Selection ####
+layers {
+  name: "masked_action"
+  type: ELTWISE
+  bottom: "Q_out"
+  bottom: "action"
+  top: "masked_action"
+  eltwise_param: {
+    operation: PROD
+  }
+}
+layers {
+  name: "Q_sa"
+  type: INNER_PRODUCT
+  bottom: "masked_action"
+  top: "Q_sa"
+  blobs_lr: 0
+  blobs_lr: 0
+  inner_product_param: {
+    num_output: 1
+    weight_filler {
+      type: "constant"
+      value: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+### Compute target Q_sa value ###
+# Kernel width and stride correspond to number of actions
+# Value of GAMMA should be the first coeff in the ELTWISE layer
+layers {
+  name: "slicer_P_out"
+  type: SLICE
+  bottom: "P_out"
+  top: "P_sa1"
+  top: "P_sa2"
+  top: "P_sa3"
+  top: "P_sa4"
+  slice_param {
+    slice_dim: 1
+    slice_point: 1
+    slice_point: 2
+    slice_point: 3
+  }
+}
+layers {
+  name: "P_sa"
+  type: ELTWISE
+  bottom: "P_sa1"
+  bottom: "P_sa2"
+  bottom: "P_sa3"
+  bottom: "P_sa4"
+  top: "P_sa"
+  eltwise_param {
+    operation: MAX
+  }
+}
+layers {
+  name: "target_Q_sa"
+  type: ELTWISE
+  bottom: "P_sa"
+  bottom: "reward"
+  top: "target_Q_sa"
+  eltwise_param: {
+    operation: SUM
+    coeff: 0.85
+    coeff: 1
+  }
+}
 layers {
   name: "regression"
   type: EUCLIDEAN_LOSS
-  bottom: "Qfc5"
-  bottom: "Qfc5"
+  bottom: "Q_sa"
+  bottom: "target_Q_sa"
   top: "loss"
 }
