@@ -394,9 +394,9 @@ layers {
   }
 }
 layers {
-  name: "slicer_Q_out"
+  name: "slicer_masked_action"
   type: SLICE
-  bottom: "Q_out"
+  bottom: "masked_action"
   top: "Q_sa1"
   top: "Q_sa2"
   top: "Q_sa3"

@@ -394,9 +394,9 @@ layers {
   }
 }
 layers {
-  name: "slicer_Q_out"
+  name: "slicer_masked_action"
   type: SLICE
-  bottom: "Q_out"
+  bottom: "masked_action"
   <ACTION_REPEAT> top: "Q_sa%d"
   slice_param {
     slice_dim: 1
