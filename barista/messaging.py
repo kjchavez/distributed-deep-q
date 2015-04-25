@@ -11,7 +11,7 @@ from collections import OrderedDict
 import barista
 
 
-def create_net_message(net, attr, compress=True):
+def create_net_message(net, attr, compress=False):
     """Consistent method for generating messages based on Caffe net params.
     Args:
         net: Caffe Net object
@@ -26,13 +26,15 @@ def create_net_message(net, attr, compress=True):
     meta_data = OrderedDict()
     data = ""
     for param in net.params:
-        meta_data[param] = list(getattr(blob, attr).shape
-                                for blob in net.params[param])
+        if param[0] == "Q":  # We only want the parameters for the Q CNN
+            meta_data[param] = list(getattr(blob, attr).shape
+                                    for blob in net.params[param])
 
-        # Use Numpy's serialization for the arrays
-        for i in xrange(len(net.params[param])):
-            assert(getattr(net.params[param][i], attr).dtype == barista.DTYPE)
-            data += getattr(net.params[param][i], attr).tostring()
+            # Use Numpy's serialization for the arrays
+            for i in xrange(len(net.params[param])):
+                assert(getattr(net.params[param][i], attr).dtype ==
+                       barista.DTYPE)
+                data += getattr(net.params[param][i], attr).tostring()
 
     header = cPickle.dumps(meta_data, -1)
     if compress:
@@ -42,18 +44,18 @@ def create_net_message(net, attr, compress=True):
     return message
 
 
-def create_gradient_message(net, compress=True):
+def create_gradient_message(net, compress=False):
     """ Extracts gradients from net's parameters and composes message.
     """
     return create_net_message(net, "diff", compress=compress)
 
 
-def create_model_message(net, compress=True):
+def create_model_message(net, compress=False):
     return create_net_message(net, "data", compress=compress)
 
 
 # Functions for loading messages directly into a Caffe net object.
-def load_net_message(message, net, attr, compressed=True):
+def load_net_message(message, net, attr, compressed=False):
     """ Loads the data received over the network into a net.
         Note: Assumes data is of type float32, but this can be relaxed.
     """
@@ -92,7 +94,7 @@ def load_model_message(message, net):
     load_net_message(message, net, "data")
 
 
-def load_gradient_message(message, compressed=True):
+def load_gradient_message(message, compressed=False):
     """ Returns dictionary of parameter name to gradient numpy array.
 
     Args:
@@ -107,7 +109,7 @@ def load_gradient_message(message, compressed=True):
         Numpy arrays in this dictionary are immutable.
     """
     header_size_message = message[0:4]
-    header_size = struct.unpack('i', header_size_message)
+    header_size = struct.unpack('i', header_size_message)[0]
     header_message = message[4:4 + header_size]
     header = cPickle.loads(header_message)
 
@@ -136,46 +138,43 @@ def evaluate_message_generation(net, state, action, reward, next_state):
     net.forward()
     net.backward()
     toc = time.time()
+    print "-- MESSAGE INFORMATION --"
     print "Forward/backward pass: %0.3f ms" % (1000 * (toc - tic))
 
     # Extract gradients
     tic = time.time()
-    grads = {}
-    data = ""
-    for param in net.params:
-        grads[param] = (net.params[param][0].diff.shape,
-                        net.params[param][1].diff.shape)
-        data += net.params[param][0].diff.tostring()
-        data += net.params[param][1].diff.tostring()
-
+    msg = create_gradient_message(net, compress=False)
     toc = time.time()
-    print "Fetch gradients: %0.3f ms" % (1000 * (toc - tic))
+    print "Without compression:"
+    print "Message size: %0.2f MB" % (sys.getsizeof(msg) / 1.0e6)
+    print "Generation time: %0.2f ms" % (1000 * (toc - tic))
+    tic = time.time()
+    grads = load_gradient_message(msg, compressed=False)
+    toc = time.time()
+    print "Loading time: %0.2f ms" % (1000 * (toc - tic))
 
     tic = time.time()
-    header = cPickle.dumps(grads, -1)
+    msg = create_gradient_message(net, compress=True)
     toc = time.time()
-    print "Pickle header: %0.5f ms" % (1000 * (toc - tic))
-    print "Size of header: %d bytes" % len(header)
-
+    print
+    print "With compression:"
+    print "Message size: %0.2f MB" % (sys.getsizeof(msg) / 1.0e6)
+    print "Generation time: %0.2f ms" % (1000 * (toc - tic))
     tic = time.time()
-    compressed_data = zlib.compress(data)
+    grads = load_gradient_message(msg, compressed=True)
     toc = time.time()
-    print "Compress message: %0.5f ms" % (1000 * (toc - tic))
-
-    print "Data size (before compression): %0.2f MB" \
-          % (sys.getsizeof(data) / 1e6)
-    print "Data size (after compression): %0.2f MB" \
-          % (sys.getsizeof(compressed_data) / 1e6)
-
-    message = struct.pack('i', len(header)) + header + compressed_data
-    print "Message size: %0.2f kB" % (sys.getsizeof(message) / 1e3)
+    print "Loading time: %0.2f ms" % (1000 * (toc - tic))
+    print
+    print "Parameters included in message:"
+    for param in grads:
+        print " -", param
 
 
 if __name__ == "__main__":
     import caffe
 
-    net = caffe.Net("barista/models/deepq/train_val.prototxt",
-                    "barista/models/deepq/deepq.caffemodel")
+    net = caffe.Net("models/deepq/train_val.prototxt",
+                    "models/deepq/fulldeepq.caffemodel")
     assert('state' in net.blobs and 'action' in net.blobs and
            'reward' in net.blobs and 'next_state' in net.blobs)
 

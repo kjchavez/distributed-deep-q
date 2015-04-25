@@ -36,7 +36,6 @@ def process_connection(socket, net):
         print "Caffe took % 0.2f milliseconds." % (1000 * (toc - tic))
         print "- Generating/sending gradient message..."
         response = net.dummy_send_gradient_update()
-        print "done."
         socket.send(response)
 
     elif message == barista.DARWIN_UPDATE:
@@ -47,6 +46,7 @@ def process_connection(socket, net):
         print "Unknown request:", message
 
     socket.close()
+    print "Closed connection"
 
 
 def main():
@@ -81,7 +81,10 @@ def main():
     serversocket.bind(('127.0.0.1', args.port))
     serversocket.listen(5)
 
-    print "Starting barista server, listening on port %d." % args.port
+    print
+    print "*"*80
+    print "* Starting BARISTA server: listening on port %d." % args.port
+    print "*"*80
     while True:
         (clientsocket, address) = serversocket.accept()
         print "Accepted connection"

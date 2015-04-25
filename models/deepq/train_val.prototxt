@@ -394,24 +394,33 @@ layers {
   }
 }
 layers {
-  name: "Q_sa"
-  type: INNER_PRODUCT
-  bottom: "masked_action"
-  top: "Q_sa"
-  blobs_lr: 0
-  blobs_lr: 0
-  inner_product_param: {
-    num_output: 1
-    weight_filler {
-      type: "constant"
-      value: 1
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
+  name: "slicer_Q_out"
+  type: SLICE
+  bottom: "Q_out"
+  top: "Q_sa1"
+  top: "Q_sa2"
+  top: "Q_sa3"
+  top: "Q_sa4"
+  slice_param {
+    slice_dim: 1
+    slice_point: 1
+    slice_point: 2
+    slice_point: 3
   }
 }
+layers {
+  name: "Q_sa"
+  type: ELTWISE
+  bottom: "Q_sa1"
+  bottom: "Q_sa2"
+  bottom: "Q_sa3"
+  bottom: "Q_sa4"
+  top: "Q_sa"
+  eltwise_param {
+    operation: SUM
+  }
+}
+
 
 ### Compute target Q_sa value ###
 # Kernel width and stride correspond to number of actions

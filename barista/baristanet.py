@@ -6,6 +6,7 @@ from barista.messaging import create_gradient_message
 from barista.messaging import create_model_message
 from barista.messaging import load_model_message
 
+
 class BaristaNet:
     def __init__(self, architecture, model, driver, data_source=None):
         self.net = caffe.Net(architecture, model)
@@ -37,7 +38,6 @@ class BaristaNet:
     def dummy_load_minibatch(self):
         """ Writes random data into the numpy arrays.
         """
-        batch_size = self.state.shape[0]
         self.state[...] = np.random.randint(0, 256, size=self.state.shape)
 
         # Actions matrix has a one-hot representation
@@ -51,9 +51,11 @@ class BaristaNet:
 
     def fetch_model(self):
         """ Get model parameters from driver over the network. """
-        request = urllib2.Request('http://%s/model' % self.driver,
-                                  headers={'Content-Type': 'application/deepQ'})
-        message = cPickle.loads(urllib2.urlopen(request).read())
+        request = urllib2.Request(
+                    'http://%s/model' % self.driver,
+                    headers={'Content-Type': 'application/deepQ'})
+
+        message = urllib2.urlopen(request).read()
         load_model_message(message, self.net)
 
     def dummy_fetch_model(self):
@@ -117,5 +119,3 @@ def assert_in_memory_config(barista_net):
     assert(pointer_local == pointer_caffe)
 
     print "IN-MEMORY data layers correctly configured."
-
-
