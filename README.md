@@ -9,4 +9,4 @@ Make sure caffe/python is on your PYTHONPATH, otherwise barista will be confused
 ## Barista
 To start the server, run
 
-    python -m barista.server <architecture.prototxt> <model.caffemodel> <solver.prototxt>
+    python -m barista <architecture.prototxt> <model.caffemodel>
