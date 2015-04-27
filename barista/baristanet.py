@@ -88,7 +88,7 @@ class BaristaNet:
         self.net.forward()
         self.net.backward()
 
-    def select_actions(self, state):
+    def select_action(self, state):
         self.state[0] = state
         self.net.forward(end='Q_out')
         action = np.argmax(self.net.blobs['Q_out'].data[0], axis=0).squeeze()
@@ -129,12 +129,12 @@ def assert_in_memory_config(barista_net):
 
 def test_action_selection():
     baristanet = BaristaNet('models/deepq/train_val.prototxt',
-                            'models/deepq/fulldeepq.caffemodel',
+                            'models/deepq/deepq.caffemodel',
                             'Augustus')
 
     for _ in xrange(10):
         state = np.random.rand(4, 128, 128)
-        opt_action = baristanet.select_actions(state)
+        opt_action = baristanet.select_action(state)
         print opt_action
 
 if __name__ == "__main__":
