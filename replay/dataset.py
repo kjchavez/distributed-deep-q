@@ -64,6 +64,10 @@ class ReplayDataset(object):
         self.valid = self.state.attrs["valid"]
 
     def add_experience(self, action, reward, state):
+        """ Add the next step in a game sequence.
+
+        Question: How do we deal with end of game boundary?
+        """
         self.action[self.head] = action
         self.reward[self.head] = reward
         self.state[self.head] = state
