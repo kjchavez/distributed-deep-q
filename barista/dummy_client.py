@@ -29,7 +29,8 @@ class DummyClient:
     def __del__(self):
         self.sock.close()
 
-client = DummyClient('127.0.0.1', 50001)
-client.send(barista.GRAD_UPDATE)
-response = client.recv()
-print response
+if __name__ == "__main__":
+    client = DummyClient('127.0.0.1', 50001)
+    client.send(barista.GRAD_UPDATE)
+    response = client.recv()
+    print response
