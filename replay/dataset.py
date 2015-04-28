@@ -7,10 +7,10 @@ We assume the following:
 (3) A single sample of states fits comfortable in memory
 
 For example, if the replay dataset stores the last 1 million experiences,
-then the history of actions is 4 bytes x 1 M = 4 MB. The same holds for the
+then the history of actions is 1 byte x 1 M = 1 MB. The same holds for the
 history of rewards. However, a modest game state representation might be
 four frames of a 64 x 64 pixel grayscale image. In which case the full history
-of 1 million states would be (64 x 64 x 4 x 4 bytes x 1 M = 65 GB)
+of 1 million states would be (64 x 64 x 4 x 1 bytes x 1 M = 17 GB)
 """
 import random
 import h5py
@@ -19,7 +19,7 @@ import numpy as np
 
 class ReplayDataset(object):
     """ A wrapper around a replay dataset residing on disk as HDF5. """
-    def __init__(self, filename, dset_size=1e3, state_shape=(4, 128, 128),
+    def __init__(self, filename, dset_size=1000, state_shape=(4, 128, 128),
                  overwrite=False):
 
         if overwrite:
@@ -31,10 +31,10 @@ class ReplayDataset(object):
             self.state = self.fp['state']
             self.dset_size = self.state.shape[0]
 
-            self.action = np.empty(self.dset_size, dtype=np.int16)
+            self.action = np.empty(self.dset_size, dtype=np.uint8)
             self.fp['action'].read_direct(self.action)
 
-            self.reward = np.empty(self.dset_size, dtype=np.float32)
+            self.reward = np.empty(self.dset_size, dtype=np.int16)
             self.fp['reward'].read_direct(self.reward)
 
             if self.dset_size != dset_size:
@@ -45,12 +45,12 @@ class ReplayDataset(object):
         else:
             self.state = self.fp.create_dataset("state",
                                                 (dset_size,) + state_shape,
-                                                dtype='f32')
-            self.fp.create_dataset("action", (dset_size,), dtype='i16')
-            self.fp.create_dataset("reward", (dset_size,), dtype='f32')
+                                                dtype='uint8')
+            self.fp.create_dataset("action", (dset_size,), dtype='uint8')
+            self.fp.create_dataset("reward", (dset_size,), dtype='int16')
 
-            self.action = np.empty(dset_size, dtype=np.int16)
-            self.reward = np.empty(dset_size, dtype=np.float32)
+            self.action = np.empty(dset_size, dtype=np.uint8)
+            self.reward = np.empty(dset_size, dtype=np.int16)
 
             self.state.attrs['head'] = 0
             self.state.attrs['valid'] = 0
@@ -110,7 +110,7 @@ class ReplayDataset(object):
         # next_state might wrap around end of dataset
         if next_idx[-1] == self.dset_size:
             shape = (sample_size,)+self.state[0].shape
-            next_states = np.empty(shape, dtype=np.float32)
+            next_states = np.empty(shape, dtype=np.uint8)
             next_states[0:-1] = self.state[next_idx[0:-1]]
             next_states[-1] = self.state[0]
         else:

@@ -73,7 +73,7 @@ def test_timing(num_write=10000, num_samples=1000, sample_size=32):
     tocs = []
     for _ in xrange(num_write):
         state = np.ones((4, 128, 128), dtype=np.float32)
-        dset.add_experience(state, None, None, None)
+        dset.add_experience(0, 0, state)
         toc = time.time()
         tocs.append(toc)
 
@@ -117,4 +117,4 @@ def test_timing(num_write=10000, num_samples=1000, sample_size=32):
 
 if __name__ == "__main__":
     test_correctness()
-    #test_timing()
+    test_timing()
