@@ -174,7 +174,7 @@ if __name__ == "__main__":
     import caffe
 
     net = caffe.Net("models/deepq/train_val.prototxt",
-                    "models/deepq/fulldeepq.caffemodel")
+                    "models/deepq/deepq.caffemodel")
     assert('state' in net.blobs and 'action' in net.blobs and
            'reward' in net.blobs and 'next_state' in net.blobs)
 

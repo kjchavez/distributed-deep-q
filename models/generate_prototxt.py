@@ -5,10 +5,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument("output")
 parser.add_argument("num_actions", type=int)
 parser.add_argument("--gamma", type=float, default=0.85)
+parser.add_argument("--template", default="deepq/train_val.template")
 
 args = parser.parse_args()
 
-with open("models/deepq/train_val.template") as template:
+with open(args.template) as template:
     with open(args.output, 'w') as prototxt:
         for line in template:
             line = line.rstrip()
