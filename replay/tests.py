@@ -5,6 +5,8 @@ import numpy as np
 
 from dataset import ReplayDataset
 
+STATE_SHAPE = (4, 128, 128)
+
 
 def test_correctness():
     dset = ReplayDataset("test.hdf5", overwrite=True, dset_size=10)
@@ -52,7 +54,8 @@ def test_correctness():
     print "S'(0,0,0):", [ns[i, 0, 0, 0] for i in range(9)]
 
 
-def test_timing(num_write=20000, num_samples=1000, sample_size=32):
+def test_timing(dset_size=10000, num_write=20000,
+                num_samples=1000, sample_size=32):
     """ Speed test for replay dataset storage scheme. """
     import matplotlib.pyplot as plt
     if os.path.exists("test.hdf5"):
@@ -64,7 +67,6 @@ def test_timing(num_write=20000, num_samples=1000, sample_size=32):
     results_file = open("evaluation/results.txt", 'w')
 
     # Create and fill dataset
-    dset_size = 1e6
     dset = ReplayDataset("test.hdf5", dset_size=dset_size)
 
     # Time writing speed
@@ -116,4 +118,7 @@ def test_timing(num_write=20000, num_samples=1000, sample_size=32):
 
 if __name__ == "__main__":
     test_correctness()
-    test_timing()
+    print "Warning: Timing test will create large (~ 630 MB) file on disk."
+    proceed = raw_input("Do you wish to continue? ")
+    if proceed in ('y', 'yes'):
+        test_timing()
