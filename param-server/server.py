@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, make_response
 from barista import messaging
 app = Flask(__name__)
 
@@ -10,7 +10,7 @@ def hello():
 def get_model_params():
   # assuming the return message would be a string(of bytes)
   m = messaging.create_message(centralModel, compress=False)
-  return Response(m, status=200)
+  return make_response(m, status=200)
 
 @app.route('/api/v1/update_model', methods=['POST'])
 def update_params():
