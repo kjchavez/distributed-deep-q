@@ -16,7 +16,7 @@ def get_model_params():
 def update_params():
 
   updateParams = messaging.load_gradient_message(request.data, compressed = False)
-  update(params)
+  update(updateParams)
   return "model updated"
 
 def update(params):
