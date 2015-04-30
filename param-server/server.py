@@ -20,6 +20,7 @@ def update_params():
   return "model updated"
 
 def update(params):
+  centralModel = params
   return 
 
 def initParams():
