@@ -13,7 +13,7 @@ def get_model_params():
   return Response(m, status=200)
 
 @app.route('/api/v1/update_model', methods=['POST'])
-def update_params():
+def update_params(request):
 
   updateParams = messaging.load_gradient_message(request.data, compressed = False)
   update(params)
