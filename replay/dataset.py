@@ -62,7 +62,10 @@ class ReplayDataset(object):
         self.valid = self.state.attrs["valid"]
 
     def add_experience(self, action, reward, state):
-        """ Add the next step in a game sequence.
+        """ Add the next step in a game sequence, i.e. a triple
+        (action, reward, state) indicating that the agent took 'action',
+        received 'reward' and *then* ended up in 'state.' The original state
+        is presumed to be the state at index (head - 1)
 
         Question: How do we deal with end of game boundary?
         """
@@ -107,6 +110,7 @@ class ReplayDataset(object):
 
         # next_state might wrap around end of dataset
         if next_idx[-1] == self.dset_size:
+            next_idx[-1] = 0
             shape = (sample_size,)+self.state[0].shape
             next_states = np.empty(shape, dtype=np.uint8)
             next_states[0:-1] = self.state[next_idx[0:-1]]
@@ -114,8 +118,8 @@ class ReplayDataset(object):
         else:
             next_states = self.state[next_idx]
 
-        return (self.state[idx], self.action[idx],
-                self.reward[idx], next_states)
+        return (self.state[idx], self.action[next_idx],
+                self.reward[next_idx], next_states)
 
     def sample_direct(self, state, action, reward, next_state, sample_size):
         """ Same as sample() but writes data directly to argument arrays. """
@@ -136,14 +140,20 @@ class ReplayDataset(object):
 
         # next_state might wrap around end of dataset
         if next_idx[-1] == self.dset_size:
+            next_idx[-1] = 0
             self.state.read_direct(next_state, np.s_[next_idx], np.s_[0:-1])
             self.state.read_direct(next_state, np.s_[0], np.s_[-1])
         else:
             self.state.read_direct(next_state, np.s_[next_idx])
 
         self.state.read_direct(state, np.s_[idx])
-        action[:] = self.action[idx]
-        reward[:] = self.reward[idx]
+        reward.flat[:] = self.reward[next_idx]
+
+        if action.shape[1] > 1:  # Using a one-hot representation
+            action[:] = 0
+            action[xrange(sample_size), self.action[next_idx]] = 1
+        else:
+            action[:] = self.action[next_idx]
 
     def __del__(self):
         self.fp['action'][:] = self.action
