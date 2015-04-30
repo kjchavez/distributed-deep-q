@@ -13,7 +13,7 @@ conf = SparkConf().setAppName("Spark Test").setMaster("local")
 sc = SparkContext(conf=conf)
 
 # Start up Barista processes
-script_path = "/home/kevin/CME323/project/test/spawn-barista.sh"
+script_path = "/home/kevin/CME323/project/spark/spawn-barista.sh"
 rdd = sc.parallelize([1]).pipe(script_path)
 rdd.collect()
 #steps = sc.parallelize(range(10))
