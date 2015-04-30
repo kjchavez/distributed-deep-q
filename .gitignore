@@ -29,6 +29,7 @@ caffe/*
 *.log
 *.sql
 *.sqlite
+*.hdf5
  
 # OS generated files #
 ######################
