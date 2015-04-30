@@ -125,8 +125,9 @@ def load_gradient_message(message, compressed=False):
         lengths = [np.prod(shape) for shape in shapes]
         grads[param] = []
         for shape, length in zip(shapes, lengths):
-            grads[param].append(np.frombuffer(data[idx:idx+length],
-                                              dtype=barista.DTYPE))
+            grads[param].append(
+                np.frombuffer(data[idx:idx+length],
+                              dtype=barista.DTYPE).reshape(shape))
             idx += length
 
     return grads
