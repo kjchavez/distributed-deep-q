@@ -24,3 +24,8 @@ Otherwise, you'll need to specify a solver which can create a new model instance
     python -m barista models/deepq/train_val.prototxt models/deepq/deepq.caffemodel --solver models/deepq/solver.prototxt
 
 This will create a new instance of the model architecture defined in *train_val.prototxt*, save it to *deepq.caffemodel* and fire up the barista server with this new model instance.
+
+## Open Questions
+- Think about how we might use broadcast/accumulate Spark functions to simplify our parameter server
+- Might the existence of [dataframes](https://databricks.com/blog/2015/02/17/introducing-dataframes-in-spark-for-large-scale-data-science.html) be helpful?
+  

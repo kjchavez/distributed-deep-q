@@ -11,7 +11,7 @@ from collections import OrderedDict
 import barista
 
 
-def create_net_message(net, attr, compress=False):
+def create_net_message(params, attr, compress=False):
     """Consistent method for generating messages based on Caffe net params.
     Args:
         net: Caffe Net object
@@ -25,16 +25,16 @@ def create_net_message(net, attr, compress=False):
     """
     meta_data = OrderedDict()
     data = ""
-    for param in net.params:
+    for param in params:
         if param[0] == "Q":  # We only want the parameters for the Q CNN
             meta_data[param] = list(getattr(blob, attr).shape
-                                    for blob in net.params[param])
+                                    for blob in params[param])
 
             # Use Numpy's serialization for the arrays
-            for i in xrange(len(net.params[param])):
-                assert(getattr(net.params[param][i], attr).dtype ==
+            for i in xrange(len(params[param])):
+                assert(getattr(params[param][i], attr).dtype ==
                        barista.DTYPE)
-                data += getattr(net.params[param][i], attr).tostring()
+                data += getattr(params[param][i], attr).tostring()
 
     header = cPickle.dumps(meta_data, -1)
     if compress:
@@ -47,11 +47,11 @@ def create_net_message(net, attr, compress=False):
 def create_gradient_message(net, compress=False):
     """ Extracts gradients from net's parameters and composes message.
     """
-    return create_net_message(net, "diff", compress=compress)
+    return create_net_message(net.params, "diff", compress=compress)
 
 
 def create_model_message(net, compress=False):
-    return create_net_message(net, "data", compress=compress)
+    return create_net_message(net.params, "data", compress=compress)
 
 
 # Functions for loading messages directly into a Caffe net object.
@@ -191,3 +191,8 @@ if __name__ == "__main__":
 
     # Evaluate timing and sizes of generated messages
     evaluate_message_generation(net, state, action, reward, next_state)
+
+    import cPickle
+    message = create_gradient_message(net)
+    with open("message.pkl",'w') as fp:
+        cPickle.dump(message, fp)
