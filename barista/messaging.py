@@ -10,6 +10,35 @@ from collections import OrderedDict
 
 import barista
 
+def create_message(params, compress=False):
+    """Consistent method for generating messages based on Caffe net params.
+    Args:
+        params: dictionary of parameters
+        compress: if True use zlib compression on data
+
+    Returns:
+        A message as a byte string of the form:
+
+                 INT X (4 bytes) | HEADER (X bytes) | DATA
+    """
+    meta_data = OrderedDict()
+    data = ""
+    for param in params:
+        meta_data[param] = list(blob.shape for blob in params[param])
+
+        # Use Numpy's serialization for the arrays
+        for i in xrange(len(params[param])):
+            assert(params[param][i].dtype ==
+                   barista.DTYPE)
+            data += params[param][i].tostring()
+
+    header = cPickle.dumps(meta_data, -1)
+    if compress:
+        data = zlib.compress(data)
+
+    message = struct.pack('i', len(header)) + header + data
+    return message
+
 
 def create_net_message(params, attr, compress=False):
     """Consistent method for generating messages based on Caffe net params.
@@ -125,6 +154,7 @@ def load_gradient_message(message, compressed=False):
         lengths = [np.prod(shape) for shape in shapes]
         grads[param] = []
         for shape, length in zip(shapes, lengths):
+            print shape, length
             grads[param].append(
                 np.frombuffer(data[idx:idx+length],
                               dtype=barista.DTYPE).reshape(shape))
