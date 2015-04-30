@@ -12,7 +12,7 @@ def get_model_params():
   m = messaging.create_message(centralModel, compress=False)
   return Response(m, status=200)
 
-@app.route('/api/v1/update_model/', methods=['POST'])
+@app.route('/api/v1/update_model', methods=['POST'])
 def update_params():
 
   updateParams = messaging.load_gradient_message(request.data, compressed = False)
