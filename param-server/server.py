@@ -1,6 +1,5 @@
 from flask import Flask, jsonify
 from barista import messaging
-from barista import baristanet
 app = Flask(__name__)
 
 @app.route("/")
@@ -25,7 +24,7 @@ def update(params):
 
 def initParams():
   global centralModel
-  centralModel = baristanet.BaristaNet()
+  centralModel = dict()
   return  
 
 if __name__ == "__main__":
