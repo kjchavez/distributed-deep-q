@@ -151,7 +151,7 @@ def load_gradient_message(message, compressed=False):
     grads = {}
     for param in header:
         shapes = header[param]
-        lengths = [np.prod(shape) for shape in shapes]
+        lengths = [np.prod(shape)*barista.DTYPE_SIZE for shape in shapes]
         grads[param] = []
         for shape, length in zip(shapes, lengths):
             print shape, length
