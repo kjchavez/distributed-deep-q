@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from barista import messaging
 app = Flask(__name__)
 
@@ -13,7 +13,7 @@ def get_model_params():
   return Response(m, status=200)
 
 @app.route('/api/v1/update_model', methods=['POST'])
-def update_params(request):
+def update_params():
 
   updateParams = messaging.load_gradient_message(request.data, compressed = False)
   update(params)
