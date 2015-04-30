@@ -10,14 +10,18 @@ def hello():
 @app.route('/api/v1/latest_model', methods=['GET'])
 def get_model_params():
   # assuming the return message would be a string(of bytes)
-  m = messaging.create_model_message(centralModel, compress=False)
+  m = messaging.create_message(centralModel, compress=False)
   return Response(m, status=200)
 
 @app.route('/api/v1/update_model/', methods=['POST'])
 def update_params():
-  messaging.load_gradient_message(request.data, compressed = False)
+
+  updateParams = messaging.load_gradient_message(request.data, compressed = False)
+  update(params)
   return "model updated"
 
+def update(params):
+  return 
 
 def initParams():
   global centralModel
@@ -26,4 +30,4 @@ def initParams():
 
 if __name__ == "__main__":
     initParams()
-    app.run(debug=True)
+    app.run(debug=True, port=5500)
