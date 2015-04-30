@@ -19,9 +19,7 @@ import numpy as np
 
 class ReplayDataset(object):
     """ A wrapper around a replay dataset residing on disk as HDF5. """
-    def __init__(self, filename, dset_size=1000, state_shape=(4, 128, 128),
-                 overwrite=False):
-
+    def __init__(self, filename, state_shape, dset_size=1000, overwrite=False):
         if overwrite:
             self.fp = h5py.File(filename, 'w')
         else:
@@ -76,7 +74,7 @@ class ReplayDataset(object):
         self.head = (self.head + 1) % self.dset_size
         self.valid = min(self.dset_size, self.valid + 1)
 
-    def sample(self, sample_size=32):
+    def sample(self, sample_size):
         """ Uniformly sample (s,a,r,s) experiences from the replay dataset.
 
         Args:
@@ -118,6 +116,34 @@ class ReplayDataset(object):
 
         return (self.state[idx], self.action[idx],
                 self.reward[idx], next_states)
+
+    def sample_direct(self, state, action, reward, next_state, sample_size):
+        """ Same as sample() but writes data directly to argument arrays. """
+        if sample_size >= self.valid:
+            raise ValueError(
+                  "Can't draw sample of size %d from replay dataset of size %d"
+                  % (sample_size, self.valid))
+
+        idx = random.sample(xrange(0, self.valid), sample_size)
+
+        # We can't include head - 1 in sample because we don't know the next
+        # state, so simply resample (very rare if dataset is large)
+        while (self.head - 1) in idx:
+            idx = random.sample(xrange(0, self.valid), sample_size)
+
+        idx.sort()  # Slicing for hdf5 must be in increasing order
+        next_idx = [x + 1 for x in idx]
+
+        # next_state might wrap around end of dataset
+        if next_idx[-1] == self.dset_size:
+            self.state.read_direct(next_state, np.s_[next_idx], np.s_[0:-1])
+            self.state.read_direct(next_state, np.s_[0], np.s_[-1])
+        else:
+            self.state.read_direct(next_state, np.s_[next_idx])
+
+        self.state.read_direct(state, np.s_[idx])
+        action[:] = self.action[idx]
+        reward[:] = self.reward[idx]
 
     def __del__(self):
         self.fp['action'][:] = self.action

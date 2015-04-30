@@ -7,9 +7,21 @@ from dataset import ReplayDataset
 
 STATE_SHAPE = (4, 128, 128)
 
+def random_fill(dset, N):
+    states = []
+    for _ in xrange(N):
+        action = random.choice(xrange(10))
+        reward = random.choice(xrange(-5, 6))
+        state = np.random.randint(0, 256, size=STATE_SHAPE)
+        dset.add_experience(action, reward, state)
+        states.append(state)
+
+    return states
+
 
 def test_correctness():
-    dset = ReplayDataset("test.hdf5", overwrite=True, dset_size=10)
+    dset = ReplayDataset("test.hdf5", STATE_SHAPE,
+                         overwrite=True, dset_size=10)
 
     print "Initially..."
     print "------------------------"
@@ -53,6 +65,26 @@ def test_correctness():
     print "S (0,0,0):", [s[i, 0, 0, 0] for i in range(9)]
     print "S'(0,0,0):", [ns[i, 0, 0, 0] for i in range(9)]
 
+def test_read_direct():
+    dset = ReplayDataset("test.hdf5", STATE_SHAPE, dset_size=1000,
+                         overwrite=True)
+
+    batch_size = 32
+    s = np.zeros((batch_size,)+STATE_SHAPE)
+    a = np.zeros(batch_size)
+    r = np.zeros(batch_size)
+    sp = np.zeros((batch_size,)+STATE_SHAPE)
+
+    states = random_fill(dset, 100)
+    dset.sample_direct(s, a, r, sp, batch_size)
+
+    diff = [np.linalg.norm(s[0] - states[i]) for i in range(100)]
+    assert(min(diff) == 0)
+
+def test_close_reopen():
+    # TODO: implement test
+    pass
+
 
 def test_timing(dset_size=10000, num_write=20000,
                 num_samples=1000, sample_size=32):
@@ -67,7 +99,7 @@ def test_timing(dset_size=10000, num_write=20000,
     results_file = open("evaluation/results.txt", 'w')
 
     # Create and fill dataset
-    dset = ReplayDataset("test.hdf5", dset_size=dset_size)
+    dset = ReplayDataset("test.hdf5", STATE_SHAPE, dset_size=dset_size)
 
     # Time writing speed
     start = time.time()
@@ -94,7 +126,7 @@ def test_timing(dset_size=10000, num_write=20000,
     times = []
     for _ in xrange(num_samples):
         tic = time.time()
-        sample = dset.sample(sample_size=sample_size)
+        sample = dset.sample(sample_size)
         toc = time.time()
         times.append(1000 * (toc - tic))
 
@@ -118,6 +150,8 @@ def test_timing(dset_size=10000, num_write=20000,
 
 if __name__ == "__main__":
     test_correctness()
+    test_read_direct()
+
     print "Warning: Timing test will create large (~ 630 MB) file on disk."
     proceed = raw_input("Do you wish to continue? ")
     if proceed in ('y', 'yes'):
