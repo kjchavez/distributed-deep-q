@@ -13,7 +13,11 @@ from caffe import SGDSolver
 
 import barista
 from barista.baristanet import BaristaNet
+from replay import ReplayDataset
 
+# Modules necessary only for faking Experience Gainer
+import random
+import numpy as np
 
 def process_connection(socket, net):
     message = ""
@@ -28,7 +32,7 @@ def process_connection(socket, net):
         print "- Fetching model..."
         net.dummy_fetch_model()
         print "- Loading minibatch..."
-        net.dummy_load_minibatch()
+        net.load_minibatch()
         print "- Running Caffe..."
         tic = time.time()
         net.full_pass()
@@ -48,8 +52,7 @@ def process_connection(socket, net):
     socket.close()
     print "Closed connection"
 
-
-def main():
+def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("architecture")
     parser.add_argument("model")
@@ -57,7 +60,15 @@ def main():
     parser.add_argument("--mode", default="cpu", choices=["cpu", "gpu"])
     parser.add_argument("--port", type=int, default=50001)
     parser.add_argument("--driver", default="127.0.0.1:5000")
-    args = parser.parse_args()
+    parser.add_argument("--dataset", default="replay-dataset.hdf5")
+    parser.add_argument("--dset-size", dest="dset_size", type=int, default=1000)
+    parser.add_argument("--overwrite", action="store_true")
+
+    return parser.parse_args()
+
+
+def main():
+    args = get_args()
 
     caffe.set_phase_test()
     if args.mode == "cpu":
@@ -74,7 +85,20 @@ def main():
         solver = SGDSolver(args.solver)
         solver.net.save(args.model)
 
+    # Initialize objects
     net = BaristaNet(args.architecture, args.model, args.driver)
+    replay_dataset = ReplayDataset(args.dataset, net.state[0].shape,
+                         dset_size=args.dset_size, overwrite=args.overwrite)
+    net.add_dataset(replay_dataset)
+
+    # TODO: Fill the replay dataset with real experiences
+    print "Filling replay dataset with random experiences..."
+    for _ in xrange(100):
+        action = random.choice(xrange(4))
+        reward = random.choice(xrange(-5, 6))
+        state = np.random.randint(0, 256, size=net.state[0].shape)
+        replay_dataset.add_experience(action, reward, state)
+    print "Done."
 
     # Start server loop
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

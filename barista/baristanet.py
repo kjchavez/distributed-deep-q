@@ -8,8 +8,10 @@ from barista.messaging import load_model_message
 
 
 class BaristaNet:
-    def __init__(self, architecture, model, driver, data_source=None):
+    def __init__(self, architecture, model, driver, dataset=None):
         self.net = caffe.Net(architecture, model)
+        self.dataset = dataset
+
         # TODO: set extra model parameters?
         self.driver = driver
 
@@ -21,6 +23,7 @@ class BaristaNet:
         self.action = np.zeros(self.net.blobs['action'].data.shape, dtype=np.float32)
         self.reward = np.zeros(self.net.blobs['reward'].data.shape, dtype=np.float32)
         self.next_state = np.zeros(self.net.blobs['next_state'].data.shape, dtype=np.float32)
+        self.batch_size = self.state.shape[0]
 
         # Set these as inputs to appropriate IN-MEMORY layers of Caffe
         # TODO: state and next_state layers shouldn't have a "labels" source,
@@ -32,8 +35,22 @@ class BaristaNet:
         # Make sure IN-MEMORY data layers are properly configured
         assert_in_memory_config(self)
 
+    def add_dataset(self, dset):
+        self.dataset = dset
+
     def load_minibatch(self):
-        raise NotImplementedError("Not implemented yet")
+        """ Reads a random sample from the replay dataset and writes it Caffe-visible
+            memory.
+        """
+        if self.dataset:
+            self.dataset.sample_direct(self.state,
+                                       self.action,
+                                       self.reward,
+                                       self.next_state,
+                                       self.batch_size)
+        else:
+            print "Warning: no dataset specified, using dummy data."
+            self.dummy_load_minibatch()
 
     def dummy_load_minibatch(self):
         """ Writes random data into the numpy arrays.
