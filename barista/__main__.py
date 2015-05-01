@@ -30,7 +30,13 @@ def process_connection(socket, net):
     if message == barista.GRAD_UPDATE:
         print "Processing gradient update request:"
         print "- Fetching model..."
-        net.dummy_fetch_model()
+        net.fetch_model()
+        print net.net.params['Qconv1'][0].data
+        print net.net.params['Qconv1'][0].diff
+        print np.linalg.norm(net.net.params['Qconv1'][0].data -  
+                             net.net.params['Qconv1'][0].diff)
+        assert(np.all(net.net.params['Qconv1'][0].data == 
+               net.net.params['Qconv1'][0].diff))
         print "- Loading minibatch..."
         net.load_minibatch()
         print "- Running Caffe..."
@@ -39,7 +45,7 @@ def process_connection(socket, net):
         toc = time.time()
         print "Caffe took % 0.2f milliseconds." % (1000 * (toc - tic))
         print "- Generating/sending gradient message..."
-        response = net.dummy_send_gradient_update()
+        response = net.send_gradient_update()
         socket.send(response)
 
     elif message == barista.DARWIN_UPDATE:
@@ -59,7 +65,7 @@ def get_args():
     parser.add_argument("--solver", default=None)
     parser.add_argument("--mode", default="cpu", choices=["cpu", "gpu"])
     parser.add_argument("--port", type=int, default=50001)
-    parser.add_argument("--driver", default="127.0.0.1:5000")
+    parser.add_argument("--driver", default="127.0.0.1:5500")
     parser.add_argument("--dataset", default="replay-dataset.hdf5")
     parser.add_argument("--dset-size", dest="dset_size", type=int, default=1000)
     parser.add_argument("--overwrite", action="store_true")
@@ -99,6 +105,7 @@ def main():
         state = np.random.randint(0, 256, size=net.state[0].shape)
         replay_dataset.add_experience(action, reward, state)
     print "Done."
+    net.send_gradient_update()
 
     # Start server loop
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

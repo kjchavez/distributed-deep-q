@@ -69,7 +69,7 @@ class BaristaNet:
     def fetch_model(self):
         """ Get model parameters from driver over the network. """
         request = urllib2.Request(
-                    'http://%s/model' % self.driver,
+                    'http://%s/api/v1/latest_model' % self.driver,
                     headers={'Content-Type': 'application/deepQ'})
 
         message = urllib2.urlopen(request).read()
@@ -85,7 +85,7 @@ class BaristaNet:
         """ Sends message as HTTP request; blocks until response is received.
         """
         message = create_gradient_message(self.net)
-        request = urllib2.Request('http://%s/update' % self.driver,
+        request = urllib2.Request('http://%s/api/v1/update_model' % self.driver,
                                   headers={'Content-Type': 'application/deepQ'},
                                   data=message)
 
