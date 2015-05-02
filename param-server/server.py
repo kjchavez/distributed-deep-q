@@ -18,7 +18,7 @@ def update_params():
   updateParams = messaging.load_gradient_message(request.data, compressed = False)
   print updateParams['Qconv1'][0]
   update(updateParams)
-  return "model updated"
+  return Response("Updated", status=200)
 
 def update(params):
   global centralModel
