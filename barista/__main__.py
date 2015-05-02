@@ -7,6 +7,7 @@ import time
 import argparse
 import socket
 import threading
+import urllib2
 
 import caffe
 from caffe import SGDSolver
@@ -105,7 +106,12 @@ def main():
         state = np.random.randint(0, 256, size=net.state[0].shape)
         replay_dataset.add_experience(action, reward, state)
     print "Done."
-    net.send_gradient_update()
+
+    try:
+        net.send_gradient_update()
+    except urllib2.URLError as e:
+        print "URLError:", e
+        sys.exit(1)
 
     # Start server loop
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

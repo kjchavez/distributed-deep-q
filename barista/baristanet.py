@@ -83,13 +83,20 @@ class BaristaNet:
 
     def send_gradient_update(self):
         """ Sends message as HTTP request; blocks until response is received.
+        Raises URLError if cannot be reach driver.
         """
         message = create_gradient_message(self.net)
-        request = urllib2.Request('http://%s/api/v1/update_model' % self.driver,
-                                  headers={'Content-Type': 'application/deepQ'},
-                                  data=message)
+        try:
+            request = urllib2.Request(
+                          'http://%s/api/v1/update_model' % self.driver,
+                          headers={'Content-Type': 'application/deepQ'},
+                          data=message)
+            response = urllib2.urlopen(request).read()
+        except urllib2.URLError as e:
+            print e.message
+            raise
 
-        return urllib2.urlopen(request).read()
+        return response
 
     def dummy_send_gradient_update(self):
         message = create_gradient_message(self.net)
