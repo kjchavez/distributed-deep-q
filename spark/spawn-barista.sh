@@ -1,9 +1,20 @@
 #!/bin/bash
-PROJECT_ROOT=/home/kevin/CME323/project
-export PYTHONPATH=$PYTHONPATH:$PROJECT_ROOT/caffe/python
-cd $PROJECT_ROOT 
-python -m barista $PROJECT_ROOT/models/deepq/train_val.prototxt $PROJECT_ROOT/models/deepq/deepq.caffemodel --dataset $PROJECT_ROOT/rdset.hdf5 &> $PROJECT_ROOT/logs/barista.log &
-cd -
+mkdir -p logs
+export PYTHONPATH=$PYTHONPATH:/home/kevin/Code/caffe/python
+pwd > logs/spawn.log
+echo "PYTHONPATH" >> logs/spawn.log
+echo $PYTHONPATH >> logs/spawn.log
+
+mkdir -p flags
+rm -f flags/__BARISTA_READY__
+python -m barista models/deepq/train_val.prototxt models/deepq/deepq.caffemodel --dataset rdset.hdf5 &> logs/barista.log &
+echo "Called successfully" >> logs/spawn.log
+
+# Wait until server is ready
+while [ ! -f flags/__BARISTA_READY__ ]
+do
+      sleep 1
+done
 
 while read LINE; do
     echo OK

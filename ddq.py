@@ -1,5 +1,7 @@
+import os, sys
 from pyspark import SparkContext, SparkConf
 
+import caffe
 import barista
 from barista.dummy_client import DummyClient
 
@@ -9,13 +11,14 @@ def sgd_step(step_num):
     dc.send(barista.GRAD_UPDATE)
     return dc.recv()
 
-conf = SparkConf().setAppName("Spark Test").setMaster("local")
+conf = SparkConf().setAppName("Spark Test")
 sc = SparkContext(conf=conf)
 
 # Start up Barista processes
-script_path = "/home/kevin/CME323/project/spark/spawn-barista.sh"
+script_path = "spark/spawn-barista.sh"
 rdd = sc.parallelize([1]).pipe(script_path)
-rdd.collect()
-#steps = sc.parallelize(range(10))
-#res = steps.map(sgd_step)
-#print res.collect()
+print rdd.collect()
+
+steps = sc.parallelize(range(10))
+res = steps.map(sgd_step)
+print res.collect()

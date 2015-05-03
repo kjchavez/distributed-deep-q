@@ -9,6 +9,7 @@ import socket
 import threading
 import urllib2
 
+print sys.path
 import caffe
 from caffe import SGDSolver
 
@@ -122,6 +123,9 @@ def main():
     print "*"*80
     print "* Starting BARISTA server: listening on port %d." % args.port
     print "*"*80
+    with open('flags/__BARISTA_READY__','w') as fp:
+        pass
+
     while True:
         (clientsocket, address) = serversocket.accept()
         print "Accepted connection"

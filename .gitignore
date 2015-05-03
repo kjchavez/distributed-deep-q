@@ -2,6 +2,7 @@ reading/
 barista/*.pyc
 models/*/*.caffemodel
 caffe/*
+flags/
 
 # Compiled source #
 ###################

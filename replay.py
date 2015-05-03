@@ -141,7 +141,7 @@ class ReplayDataset(object):
         # next_state might wrap around end of dataset
         if next_idx[-1] == self.dset_size:
             next_idx[-1] = 0
-            self.state.read_direct(next_state, np.s_[next_idx], np.s_[0:-1])
+            self.state.read_direct(next_state, np.s_[next_idx[0:-1]], np.s_[0:-1])
             self.state.read_direct(next_state, np.s_[0], np.s_[-1])
         else:
             self.state.read_direct(next_state, np.s_[next_idx])

@@ -10,22 +10,46 @@ There is a *caffe* sub-directory in the project root folder. If you cloned the p
 
 Follow the instructions at [http://caffe.berkeleyvision.org/installation.html](http://caffe.berkeleyvision.org/installation.html) to build Caffe and pycaffe.
 
-## Barista
-Make sure caffe/python is on your PYTHONPATH, otherwise barista will be confused. 
+## Local Testing
+
+### Parameter server on driver
+Set a couple of environment variables:
     
-    export PYTHONPATH=$PYTHONPATH:<path-to-caffe/python>
+    export DDQ_ROOT=<path-to-project>
+    export PYTHONPATH=$PYTHONPATH:$DDQ_ROOT:$DDQ_ROOT/caffe/python
 
-If you already have an initialized model, you can start the server with
+Go to the project's root directory
 
-    python -m barista <architecture.prototxt> <model.caffemodel>
+    cd $DDQ_ROOT
 
-Otherwise, you'll need to specify a solver which can create a new model instance. For example:
+and fire up the parameter server
 
-    python -m barista models/deepq/train_val.prototxt models/deepq/deepq.caffemodel --solver models/deepq/solver.prototxt
+    python param-server/server.py
 
-This will create a new instance of the model architecture defined in *train_val.prototxt*, save it to *deepq.caffemodel* and fire up the barista server with this new model instance.
+### Submitting the job
+Move to a separate terminal, also in the project root directory. If you haven't already done so, create a zip file of the barista package:
+
+    zip -r barista barista
+
+Then submit the ddq.py script using spark-submit:
+
+    spark-submit --master local --py-files barista.zip,replay.py ddq.py
+
+Both stdout and stderr from the Barista server are redirected to a file in the logs directory.
+
+### Common Errors
+- **socket.error: [Errno 99] Cannot assign requested address.** If there is a complaint about "localhost" in the message, check your /etc/hosts file and make sure the line "127.0.0.1 localhost" is present.
+- **Output of spark-submit hangs.** Check logs/barista.log. If its the error: "socket.error: [Errno 98] Address already in use" then use:
+
+    netstat -ap | grep 50001
+
+And see if any processes (pids will be listed as well) are listening on that port. If the status is LISTENING, try killing the process with
+
+    kill -9 <pid>
+
+Then try spark-submitting again.
 
 ## Open Questions
 - Think about how we might use broadcast/accumulate Spark functions to simplify our parameter server
 - Might the existence of [dataframes](https://databricks.com/blog/2015/02/17/introducing-dataframes-in-spark-for-large-scale-data-science.html) be helpful?
-  
+- [https://spark.apache.org/docs/latest/submitting-applications.html](https://spark.apache.org/docs/latest/submitting-applications.html)  
