@@ -41,13 +41,13 @@ Both stdout and stderr from the Barista server are redirected to a file in the l
 - **socket.error: [Errno 99] Cannot assign requested address.** If there is a complaint about "localhost" in the message, check your /etc/hosts file and make sure the line "127.0.0.1 localhost" is present.
 - **Output of spark-submit hangs.** Check logs/barista.log. If its the error: "socket.error: [Errno 98] Address already in use" then use:
 
-    netstat -ap | grep 50001
+        netstat -ap | grep 50001
 
-And see if any processes (pids will be listed as well) are listening on that port. If the status is LISTENING, try killing the process with
+    And see if any processes (pids will be listed as well) are listening on that port. If the status is LISTENING, try killing the process with
 
-    kill -9 <pid>
+        kill -9 <pid>
 
-Then try spark-submitting again.
+    Then try spark-submitting again.
 
 ## Open Questions
 - Think about how we might use broadcast/accumulate Spark functions to simplify our parameter server
