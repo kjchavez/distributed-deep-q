@@ -6,11 +6,11 @@ import numpy as np
 # constants
 _NX = 10
 _NY = 10
-_NORTH = "wW"
-_SOUTH = "sS"
-_EAST = "dD"
-_WEST = "aA"
-_DIRECTIONS = "wasdWASD"
+_NORTH = "w"
+_SOUTH = "s"
+_EAST = "d"
+_WEST = "a"
+_DIRECTIONS = "wasd"
 _NULL_DIR = "n"
 _NULL_POS = (-1, -1)
 _EMPTY_CELL = -1
@@ -55,7 +55,7 @@ class Snake(object):
 
     def __len__(self):
         return len(self.deque)
-        
+
     def set_snake(self, snake_ordered_list):
         for snake_cell in snake_ordered_list:
             self.deque.append(snake_cell)
@@ -73,9 +73,9 @@ class Snake(object):
            (direction in _SOUTH and self.direction in _NORTH) or \
            (direction in _EAST and self.direction in _WEST) or \
            (direction in _WEST and self.direction in _EAST):
-            return self.direction[0]
+            pass
         else:
-            return direction
+            self.direction = direction
 
     def deduce_neck(self, xhead, yhead, direction):
         if direction in _NORTH:
@@ -92,10 +92,10 @@ class Snake(object):
     def deduce_direction(self):
         head = self.deque[0]
         neck = self.deque[1]
-        
+
         dx = head[0] - neck[0]
         dy = head[1] - neck[1]
-        
+
         if dx == 1:
             return _NORTH
         elif dx == -1:
@@ -108,7 +108,11 @@ class Snake(object):
             raise ValueError("Invalid direction")
 
     def new_head(self, direction):
-        self.direction = self.legalize_direction(direction)
+        print self.direction
+
+        self.legalize_direction(direction)
+
+        print "input: " + direction + ", actual: " + self.direction
 
         head = list(self.deque[-1])
         if self.direction in _NORTH:
@@ -125,7 +129,7 @@ class Snake(object):
             head[0] %= _NX
         else:
             raise ValueError("Direction input error")
-            
+
         return tuple(head)
 
     def grow(self, direction):
@@ -140,11 +144,11 @@ class Snake(object):
 class SnakeGame(object):
     def __init__(self):
         self.apples = Apples()
-        self.snake = Snake(_NX // 2, _NY // 2, _EAST) # grid center
+        self.snake = Snake(_NX // 2, _NY // 2, _EAST)
         self.score = 0
         self.gameover = False
         self.generate_apple()
-        
+
     def empty_grid(self):
         return _GRID - (set(self.snake.deque) | self.apples.set)
 
@@ -164,13 +168,12 @@ class SnakeGame(object):
                 else:
                     string.append("  | ")
             string.append("\n")
-        
         string.append("   | ")
         for x in range(_NX):
             string.append(str(x) + " | ")
         string.append("\n")
         return "".join(string)
-        
+
     def encode_state(self):
         snake_list = list(self.snake.deque)
         state_array = _EMPTY_CELL * np.ones((_NX, _NY), dtype=np.int)
@@ -191,7 +194,7 @@ class SnakeGame(object):
             for x in range(_NX):
                 if state_array[x, y] == _APPLE:
                     apples.append((x, y))
-                elif state_array[x, y] != _EMPTY_CELL: # is snake
+                elif state_array[x, y] != _EMPTY_CELL:
                     snake[state_array[x, y]] = (x, y)
                     snake_length += 1
         return (snake[:snake_length], apples)
@@ -199,7 +202,6 @@ class SnakeGame(object):
     def set_state(self, state_array):
         if state_array.shape != (_NX, _NY):
             raise ValueError("State array input is incorrect")
-        
         self.apples.clear()
         self.snake.clear()
         snake, apples = self.decode_state(state_array)
@@ -235,6 +237,7 @@ class SnakeGame(object):
         print(self)
         print "reward: " + str(score_update)
         print "total score: " + str(self.score)
+        print "direction: " + self.snake.direction
         return new_state
 
     def human_game(self):
@@ -244,6 +247,10 @@ class SnakeGame(object):
         print(self)
         while not self.gameover:
             direction = raw_input("Use WASD for direction control: ")
-            while direction not in _DIRECTIONS:
-                direction = raw_input("Invalid input.\n Use WASD for direction control: ")
-            state = self.human_play(state, direction)
+            if direction:
+                while direction not in _DIRECTIONS:
+                    direction = raw_input("Invalid input.\n" +
+                                          "Use WASD for direction control: ")
+                state = self.human_play(state, direction)
+            else:
+                self.gameover = True
