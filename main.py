@@ -100,7 +100,7 @@ def main():
                        game.encode_state())
 
     for _ in xrange(100):
-        exp_gain.generate_experience()
+        exp_gain.generate_experience(1)
 
     print replay_dataset.head
 
