@@ -23,7 +23,7 @@ class ExpGain(object):
         if random.random() < epsilon:
             return random.choice(self.actions)
         else:
-            return self.network(pstate)
+            return self.actions[self.network.select_action(pstate)]
 
     def get_epsilon(self, iter_num):
         if iter_num > _FRAME_LIMIT:
