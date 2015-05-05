@@ -16,12 +16,14 @@ from caffe import SGDSolver
 import barista
 from barista.baristanet import BaristaNet
 from replay import ReplayDataset
+from gamesim.SnakeGame import SnakeGame
+from expgain.ExpGain import ExpGain
 
 # Modules necessary only for faking Experience Gainer
 import random
 import numpy as np
 
-def process_connection(socket, net):
+def process_connection(socket, net, exp_gain, iter_num=1):
     message = ""
     while len(message) < barista.MSG_LENGTH:
         chunk = socket.recv(4096)
@@ -30,6 +32,7 @@ def process_connection(socket, net):
         message += chunk
 
     if message == barista.GRAD_UPDATE:
+        exp_gain.generate_experience(iter_num)
         print "Processing gradient update request:"
         print "- Fetching model..."
         net.fetch_model()
@@ -98,6 +101,10 @@ def main():
     replay_dataset = ReplayDataset(args.dataset, net.state[0].shape,
                          dset_size=args.dset_size, overwrite=args.overwrite)
     net.add_dataset(replay_dataset)
+
+    game = SnakeGame()
+    exp_gain = ExpGain(net, "wasd", lambda x: x, game, replay_dataset,
+                       game.encode_state())
 
     # TODO: Fill the replay dataset with real experiences
     print "Filling replay dataset with random experiences..."
