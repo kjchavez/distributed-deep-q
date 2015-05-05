@@ -1,12 +1,20 @@
 import numpy as np
 import random
 from collections import deque
+import scipy.ndimage
 
 _FRAME_LIMIT = 1000000
 _EPSILON_MAX = 1.0
 _EPSILON_MIN = 0.1
 _NFRAME = 4
 
+def resampler(size):
+    def func(state):
+        zoom_factor = (1.,float(size[0])/state.shape[1],
+                       float(size[1])/state.shape[2])
+        return scipy.ndimage.zoom(state, zoom_factor, order=0)
+
+    return func
 
 class ExpGain(object):
     def __init__(self, net, actions, preprocessor, game, dataset, init_state):
@@ -34,9 +42,9 @@ class ExpGain(object):
 
     def arrayify_frames(self):
         nx, ny = self.sequence[0].shape
-        array = np.zeros((nx, ny, _NFRAME), dtype=np.int)
+        array = np.zeros((_NFRAME, ny, nx), dtype=np.int)
         for frame in range(_NFRAME):
-            array[:, :, frame] = self.sequence[frame]
+            array[frame] = self.sequence[frame]
         return array
 
     def generate_experience(self, iter_num):
