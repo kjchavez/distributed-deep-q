@@ -9,7 +9,6 @@ import socket
 import threading
 import urllib2
 
-print sys.path
 import caffe
 from caffe import SGDSolver
 
@@ -17,7 +16,7 @@ import barista
 from barista.baristanet import BaristaNet
 from replay import ReplayDataset
 from gamesim.SnakeGame import SnakeGame
-from expgain.ExpGain import ExpGain
+from ExpGain import ExpGain
 
 # Modules necessary only for faking Experience Gainer
 import random
