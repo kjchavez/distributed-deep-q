@@ -35,13 +35,7 @@ def process_connection(socket, net, exp_gain, iter_num=1):
         exp_gain.generate_experience(iter_num)
         print "Processing gradient update request:"
         print "- Fetching model..."
-        net.fetch_model()
-        print net.net.params['Qconv1'][0].data
-        print net.net.params['Qconv1'][0].diff
-        print np.linalg.norm(net.net.params['Qconv1'][0].data -  
-                             net.net.params['Qconv1'][0].diff)
-        assert(np.all(net.net.params['Qconv1'][0].data == 
-               net.net.params['Qconv1'][0].diff))
+        net.dummy_fetch_model()
         print "- Loading minibatch..."
         net.load_minibatch()
         print "- Running Caffe..."
@@ -50,7 +44,7 @@ def process_connection(socket, net, exp_gain, iter_num=1):
         toc = time.time()
         print "Caffe took % 0.2f milliseconds." % (1000 * (toc - tic))
         print "- Generating/sending gradient message..."
-        response = net.send_gradient_update()
+        response = net.dummy_send_gradient_update()
         socket.send(response)
 
     elif message == barista.DARWIN_UPDATE:
@@ -106,20 +100,10 @@ def main():
     exp_gain = ExpGain(net, "wasd", lambda x: x, game, replay_dataset,
                        game.encode_state())
 
-    # TODO: Fill the replay dataset with real experiences
-    print "Filling replay dataset with random experiences..."
     for _ in xrange(100):
-        action = random.choice(xrange(4))
-        reward = random.choice(xrange(-5, 6))
-        state = np.random.randint(0, 256, size=net.state[0].shape)
-        replay_dataset.add_experience(action, reward, state)
-    print "Done."
+        exp_gain.generate_experience()
 
-    try:
-        net.send_gradient_update()
-    except urllib2.URLError as e:
-        print "URLError:", e
-        sys.exit(1)
+    print replay_dataset.head
 
     # Start server loop
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
