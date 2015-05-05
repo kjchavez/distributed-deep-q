@@ -50,8 +50,8 @@ class Snake(object):
     def __init__(self, x, y, direction):
         self.deque = deque()
         self.direction = direction
-        self.deque.append((x, y))
-        self.deque.append(self.deduce_neck(x, y, direction))
+        self.deque.appendleft((x, y))
+        self.deque.appendleft(self.deduce_neck(x, y, direction))
 
     def __len__(self):
         return len(self.deque)
@@ -73,19 +73,19 @@ class Snake(object):
            (direction in _SOUTH and self.direction in _NORTH) or \
            (direction in _EAST and self.direction in _WEST) or \
            (direction in _WEST and self.direction in _EAST):
-            pass
+            return self.direction
         else:
-            self.direction = direction
+            return direction
 
     def deduce_neck(self, xhead, yhead, direction):
         if direction in _NORTH:
-            return (xhead, yhead - 1)
+            return (xhead, (yhead - 1) % _NY)
         elif direction in _SOUTH:
-            return (xhead, yhead + 1)
+            return (xhead, (yhead + 1) % _NY)
         elif direction in _WEST:
-            return (xhead - 1, yhead)
+            return ((xhead - 1) % _NX, yhead)
         elif direction in _EAST:
-            return (xhead + 1, yhead)
+            return ((xhead + 1) % _NX, yhead)
         else:
             assert True
 
@@ -93,38 +93,38 @@ class Snake(object):
         head = self.deque[0]
         neck = self.deque[1]
 
-        dx = head[0] - neck[0]
-        dy = head[1] - neck[1]
+        dx = (head[0] - neck[0]) % _NX
+        if dx > 1:
+            dx = -1
+        dy = (head[1] - neck[1]) % _NY
+        if dy > 1:
+            dy = -1
 
         if dx == 1:
-            return _NORTH
-        elif dx == -1:
-            return _SOUTH
-        elif dy == 1:
             return _EAST
-        elif dy == -1:
+        elif dx == -1:
             return _WEST
+        elif dy == 1:
+            return _NORTH
+        elif dy == -1:
+            return _SOUTH
         else:
             raise ValueError("Invalid direction")
 
     def new_head(self, direction):
-        print self.direction
+        direction = self.legalize_direction(direction)
 
-        self.legalize_direction(direction)
-
-        print "input: " + direction + ", actual: " + self.direction
-
-        head = list(self.deque[-1])
-        if self.direction in _NORTH:
+        head = list(self.deque[0])
+        if direction in _NORTH:
             head[1] += 1
             head[1] %= _NY
-        elif self.direction in _SOUTH:
+        elif direction in _SOUTH:
             head[1] -= 1
             head[1] %= _NY
-        elif self.direction in _EAST:
+        elif direction in _EAST:
             head[0] += 1
             head[0] %= _NX
-        elif self.direction in _WEST:
+        elif direction in _WEST:
             head[0] -= 1
             head[0] %= _NX
         else:
@@ -133,11 +133,12 @@ class Snake(object):
         return tuple(head)
 
     def grow(self, direction):
-        self.deque.append(self.new_head(direction))
+        self.deque.appendleft(self.new_head(direction))
+        self.direction = self.legalize_direction(direction)
 
     def move(self, direction):
         self.grow(direction)
-        self.deque.popleft()
+        self.deque.pop()
 
 
 # game emulator
@@ -246,11 +247,8 @@ class SnakeGame(object):
         print "Welcome to a game of Snake!"
         print(self)
         while not self.gameover:
-            direction = raw_input("Use WASD for direction control: ")
-            if direction:
-                while direction not in _DIRECTIONS:
-                    direction = raw_input("Invalid input.\n" +
-                                          "Use WASD for direction control: ")
-                state = self.human_play(state, direction)
-            else:
-                self.gameover = True
+            direction = raw_input("Use 'wasd' for direction control: ")
+            while direction not in _DIRECTIONS or len(direction) != 1:
+                direction = raw_input("Invalid input.\n" +
+                                      "Use 'wasd' for direction control: ")
+            state = self.human_play(state, direction)

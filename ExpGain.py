@@ -9,14 +9,13 @@ _NFRAME = 4
 
 
 class ExpGain(object):
-    def __init__(self, network, actions, preprocessor, game, dataset,
-                 init_state):
-        self.network = network  # dqn action selector
-        self.actions = actions  # list of actions
-        self.preprocessor = preprocessor  # downsampler
-        self.game = game  # game updater
-        self.dataset = dataset  # replay_dataset object
-        self.sequence = deque()  # sequence of frames
+    def __init__(self, net, actions, preprocessor, game, dataset, init_state):
+        self.net = net                      # dqn action selector
+        self.actions = actions              # list of actions
+        self.preprocessor = preprocessor    # downsampler
+        self.game = game                    # game updater
+        self.dataset = dataset              # replay_dataset object
+        self.sequence = deque()             # sequence of frames
         for _ in range(_NFRAME):
             self.sequence.append(init_state)
 
@@ -24,7 +23,7 @@ class ExpGain(object):
         if random.random() < epsilon:
             return random.choice(self.actions)
         else:
-            return self.actions[self.network.select_action(pstate)]
+            return self.actions[self.net.select_action(pstate)]
 
     def get_epsilon(self, iter_num):
         if iter_num > _FRAME_LIMIT:
