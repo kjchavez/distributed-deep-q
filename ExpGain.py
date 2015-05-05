@@ -38,7 +38,7 @@ class ExpGain(object):
             return _EPSILON_MIN
         else:
             return _EPSILON_MIN + (_EPSILON_MAX - _EPSILON_MIN) \
-                   * iter_num / _FRAME_LIMIT
+                   * (_FRAME_LIMIT - iter_num) / _FRAME_LIMIT
 
     def arrayify_frames(self):
         nx, ny = self.sequence[0].shape
@@ -51,8 +51,8 @@ class ExpGain(object):
         pstate = self.preprocessor(self.arrayify_frames())
         action = self.select_action(pstate, self.get_epsilon(iter_num))
         new_state, reward = self.game(self.sequence[-1], action)
-        self.states.popleft()
-        self.states.append(new_state)
+        self.sequence.popleft()
+        self.sequence.append(new_state)
         self.dataset.add_experience(
-            action, reward, self.preprocessor(self.arrayify_frames())
+            self.actions.index(action), reward, self.preprocessor(self.arrayify_frames())
         )

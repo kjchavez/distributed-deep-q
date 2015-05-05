@@ -16,7 +16,7 @@ import barista
 from barista.baristanet import BaristaNet
 from replay import ReplayDataset
 from gamesim.SnakeGame import SnakeGame
-from ExpGain import ExpGain
+from ExpGain import ExpGain, resampler
 
 # Modules necessary only for faking Experience Gainer
 import random
@@ -96,7 +96,8 @@ def main():
     net.add_dataset(replay_dataset)
 
     game = SnakeGame()
-    exp_gain = ExpGain(net, "wasd", lambda x: x, game, replay_dataset,
+    preprocessor = resampler(net.state.shape[2:])
+    exp_gain = ExpGain(net, ['w','a','s','d'], preprocessor, game.cpu_play, replay_dataset,
                        game.encode_state())
 
     for _ in xrange(100):
