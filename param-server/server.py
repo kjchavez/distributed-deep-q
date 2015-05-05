@@ -1,6 +1,9 @@
 from flask import Flask, Response, jsonify, request
 from barista import messaging
+from redis import Redis
+import redis_collections as redisC
 app = Flask(__name__)
+
 
 @app.route("/")
 def hello():
@@ -9,25 +12,27 @@ def hello():
 @app.route('/api/v1/latest_model', methods=['GET'])
 def get_model_params():
   # assuming the return message would be a string(of bytes)
-  print centralModel['Qconv1'][0]
-  m = messaging.create_message(centralModel, compress=False)
+  # print centralModel['Qconv1'][0]
+  model = RedisC(key="centralModel")
+  m = messaging.create_message(dict(model), compress=False)
   return Response(m, status=200)
 
 @app.route('/api/v1/update_model', methods=['POST'])
 def update_params():
   updateParams = messaging.load_gradient_message(request.data, compressed = False)
-  print updateParams['Qconv1'][0]
+  # print updateParams['Qconv1'][0]
   update(updateParams)
   return Response("Updated", status=200)
 
 def update(params):
-  global centralModel
-  centralModel = params
+  # get model stored in redis
+  model = redisC.Dict(key="centralModel")
+  model.update(params)
   return 
 
 def initParams():
-  global centralModel
-  centralModel = dict()
+  redisInstance = Redis(host='localhost', port=6379, db=0)
+  d = redisC.Dict(redis=redisInstance, key="centralModel")
   return  
 
 if __name__ == "__main__":
