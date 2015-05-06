@@ -119,7 +119,7 @@ def main():
         (clientsocket, address) = serversocket.accept()
         print "Accepted connection"
         client_thread = threading.Thread(target=process_connection,
-                                         args=(clientsocket, net))
+                                         args=(clientsocket, net, exp_gain))
         client_thread.run()
 
 if __name__ == "__main__":

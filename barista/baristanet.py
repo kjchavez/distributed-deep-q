@@ -1,8 +1,10 @@
-import time
+import sys
 import urllib2
 import numpy as np
 import caffe
 import barista
+import posix_ipc
+import mmap
 from barista.messaging import create_gradient_message
 from barista.messaging import create_model_message
 from barista.messaging import load_model_message
@@ -20,7 +22,19 @@ class BaristaNet:
                'reward' in self.net.blobs and 'next_state' in self.net.blobs)
 
         # Allocate memory for all inputs to the network
-        self.state = np.zeros(self.net.blobs['state'].data.shape, dtype=np.float32)
+        print self.net.blobs['state'].data
+        print self.net.blobs['state'].data.size
+        print self.net.blobs['state'].data[0]
+        self.state_shmem = posix_ipc.SharedMemory(
+                                '/state',
+                                flags=posix_ipc.O_CREAT,
+                                size=self.net.blobs['state'].data.size * 4)
+
+        state_buffer = mmap.mmap(self.state_shmem.fd, self.state_shmem.size)
+        self.state = np.frombuffer(state_buffer, dtype=np.float32) \
+                       .reshape(self.net.blobs['state'].data.shape)
+
+        #self.state = np.zeros(self.net.blobs['state'].data.shape, dtype=np.float32)
         self.action = np.zeros(self.net.blobs['action'].data.shape, dtype=np.float32)
         self.reward = np.zeros(self.net.blobs['reward'].data.shape, dtype=np.float32)
         self.next_state = np.zeros(self.net.blobs['next_state'].data.shape, dtype=np.float32)
@@ -118,6 +132,10 @@ class BaristaNet:
         self.net.forward(end='Q_out')
         action = np.argmax(self.net.blobs['Q_out'].data[0], axis=0).squeeze()
         return action
+
+    def __del__(self):
+        self.state_shmem.close_fd()
+        self.state_shmem.unlink()
 
 
 # Auxiliary functions
