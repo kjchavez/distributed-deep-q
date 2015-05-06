@@ -100,10 +100,8 @@ def main():
     exp_gain = ExpGain(net, ['w','a','s','d'], preprocessor, game.cpu_play, replay_dataset,
                        game.encode_state())
 
-    for _ in xrange(100):
-        exp_gain.generate_experience(1)
-
-    print replay_dataset.head
+    for _ in xrange(50):
+        exp_gain.generate_experience(1e8)
 
     # Start server loop
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
