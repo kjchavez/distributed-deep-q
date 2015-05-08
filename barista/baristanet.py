@@ -1,13 +1,13 @@
-import sys
 import urllib2
 import numpy as np
+import posix_ipc
+
 import caffe
 import barista
-import posix_ipc
-import mmap
 from barista.messaging import create_gradient_message
 from barista.messaging import create_model_message
 from barista.messaging import load_model_message
+from barista.ipc_utils import create_shmem_ndarray
 
 
 class BaristaNet:
@@ -22,22 +22,30 @@ class BaristaNet:
                'reward' in self.net.blobs and 'next_state' in self.net.blobs)
 
         # Allocate memory for all inputs to the network
-        print self.net.blobs['state'].data
-        print self.net.blobs['state'].data.size
-        print self.net.blobs['state'].data[0]
-        self.state_shmem = posix_ipc.SharedMemory(
-                                '/state',
-                                flags=posix_ipc.O_CREAT,
-                                size=self.net.blobs['state'].data.size * 4)
+        def create_caffe_shmem_array(name):
+            return create_shmem_ndarray('/'+name,
+                                        self.net.blobs[name].data.shape,
+                                        np.float32,
+                                        flags=posix_ipc.O_CREAT)
 
-        state_buffer = mmap.mmap(self.state_shmem.fd, self.state_shmem.size)
-        self.state = np.frombuffer(state_buffer, dtype=np.float32) \
-                       .reshape(self.net.blobs['state'].data.shape)
+        self.state_shmem, self.state = create_caffe_shmem_array('state')
+        self.action_shmem, self.action = create_caffe_shmem_array('action')
+        self.reward_shmem, self.reward = create_caffe_shmem_array('reward')
+        self.next_state_shmem, self.next_state = create_caffe_shmem_array('next_state')
 
-        #self.state = np.zeros(self.net.blobs['state'].data.shape, dtype=np.float32)
-        self.action = np.zeros(self.net.blobs['action'].data.shape, dtype=np.float32)
-        self.reward = np.zeros(self.net.blobs['reward'].data.shape, dtype=np.float32)
-        self.next_state = np.zeros(self.net.blobs['next_state'].data.shape, dtype=np.float32)
+        # self.memory_data_layers = {}
+        # self.shmem = {}
+        # for name, layer in zip(self.net._layer_names, self.net.layers):
+        #     if layer.type == 29:
+        #         print "Layer '%s' is a MemoryDataLayer" % name
+        #         handles = name.split('-', 1)
+
+        #         for name in handles:
+        #             shmem, arr = create_caffe_shmem_array(name)
+        #             self.memory_data_layers[name] = arr
+        #             self.shmem[name] = shmem
+
+
         self.batch_size = self.state.shape[0]
 
         # Set these as inputs to appropriate IN-MEMORY layers of Caffe
@@ -48,7 +56,7 @@ class BaristaNet:
         self.net.set_input_arrays(self.action, self.reward, barista.ACTION_REWARD_MD_LAYER)
 
         # Make sure IN-MEMORY data layers are properly configured
-        assert_in_memory_config(self)
+        # assert_in_memory_config(self)
 
     def add_dataset(self, dset):
         self.dataset = dset
@@ -134,8 +142,10 @@ class BaristaNet:
         return action
 
     def __del__(self):
-        self.state_shmem.close_fd()
-        self.state_shmem.unlink()
+        for shmem in (self.state_shmem, self.action_shmem,
+                      self.reward_shmem, self.next_state_shmem):
+            shmem.close_fd()
+            shmem.unlink()
 
 
 # Auxiliary functions
