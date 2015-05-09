@@ -4,7 +4,7 @@ from redis import Redis
 import redis_collections as redisC
 import pdb
 
-
+SGD_ALPHA = 0.01
 app = Flask(__name__)
 
 
@@ -34,10 +34,11 @@ def clear_params():
   model.clear()
   return Response("Cleared", status=200)
 
-def update(params):
+def SGDUpdate(params):
   # get model stored in redis
   model = redisC.Dict(key="centralModel")
-  model.update(d)
+	for k in model:
+		model[k] -= SGD_ALPHA*params[k]
   return 
 
 def initParams():
