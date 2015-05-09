@@ -91,12 +91,13 @@ def main():
 
     # Initialize objects
     net = BaristaNet(args.architecture, args.model, args.driver)
-    replay_dataset = ReplayDataset(args.dataset, net.state[0].shape,
+    state_shape = (4, 16, 16)
+    replay_dataset = ReplayDataset(args.dataset, state_shape,
                          dset_size=args.dset_size, overwrite=args.overwrite)
     net.add_dataset(replay_dataset)
 
     game = SnakeGame()
-    preprocessor = resampler(net.state.shape[2:])
+    preprocessor = resampler(state_shape[1:])
     exp_gain = ExpGain(net, ['w','a','s','d'], preprocessor, game.cpu_play, replay_dataset,
                        game.encode_state())
 

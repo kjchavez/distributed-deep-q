@@ -11,83 +11,90 @@ from barista.ipc_utils import create_shmem_ndarray
 
 
 class BaristaNet:
-    def __init__(self, architecture, model, driver, dataset=None):
+    def __init__(self, architecture, model, driver):
         self.net = caffe.Net(architecture, model)
-        self.dataset = dataset
 
         # TODO: set extra model parameters?
         self.driver = driver
 
-        assert('state' in self.net.blobs and 'action' in self.net.blobs and
-               'reward' in self.net.blobs and 'next_state' in self.net.blobs)
-
-        # Allocate memory for all inputs to the network
         def create_caffe_shmem_array(name):
             return create_shmem_ndarray('/'+name,
                                         self.net.blobs[name].data.shape,
                                         np.float32,
                                         flags=posix_ipc.O_CREAT)
 
-        self.state_shmem, self.state = create_caffe_shmem_array('state')
-        self.action_shmem, self.action = create_caffe_shmem_array('action')
-        self.reward_shmem, self.reward = create_caffe_shmem_array('reward')
-        self.next_state_shmem, self.next_state = create_caffe_shmem_array('next_state')
+        # Allocate shared memory for all memory data layers in the network
+        self.shared_arrays = {}
+        self.shmem = {}
+        self._null_array = None
+        self.batch_size = None
+        for idx, (name, layer) in enumerate(zip(self.net._layer_names, self.net.layers)):
+            if layer.type != barista.MEMORY_DATA_LAYER:
+                continue
 
-        # self.memory_data_layers = {}
-        # self.shmem = {}
-        # for name, layer in zip(self.net._layer_names, self.net.layers):
-        #     if layer.type == 29:
-        #         print "Layer '%s' is a MemoryDataLayer" % name
-        #         handles = name.split('-', 1)
+            print "Layer '%s' is a MemoryDataLayer" % name
+            handles = name.split('-', 1)
 
-        #         for name in handles:
-        #             shmem, arr = create_caffe_shmem_array(name)
-        #             self.memory_data_layers[name] = arr
-        #             self.shmem[name] = shmem
+            for name in handles:
+                print "Allocating shared memory for %s." % name
+                shmem, arr = create_caffe_shmem_array(name)
+                self.shared_arrays[name] = arr
+                self.shmem[name] = shmem
+                if self.batch_size:
+                    assert(arr.shape[0] == self.batch_size)
+                else:
+                    self.batch_size = arr.shape[0]
 
+            if len(handles) == 2:
+                self.net.set_input_arrays(self.shared_arrays[handles[0]],
+                                          self.shared_arrays[handles[1]],
+                                          idx)
+            elif len(handles) == 1:
+                if self._null_array is None:
+                    shape = (self.shared_arrays[handles[0]].shape[0], 1, 1, 1)
+                    self._null_array = np.zeros(shape, dtype=np.float32)
+                self.net.set_input_arrays(self.shared_arrays[handles[0]],
+                                          self._null_array, idx)
 
-        self.batch_size = self.state.shape[0]
+        # Allow convenient access to certain Caffe net properties
+        self.blobs = self.net.blobs
 
-        # Set these as inputs to appropriate IN-MEMORY layers of Caffe
-        # TODO: state and next_state layers shouldn't have a "labels" source,
-        # but the set_input_arrays function requires two sections of memory
-        self.net.set_input_arrays(self.state, self.reward, barista.STATE_MD_LAYER)
-        self.net.set_input_arrays(self.next_state, self.reward, barista.NEXT_STATE_MD_LAYER)
-        self.net.set_input_arrays(self.action, self.reward, barista.ACTION_REWARD_MD_LAYER)
+        # Create semaphore for interprocess synchronization
+        self.compute_semaphore = posix_ipc.Semaphore(None, flags=posix_ipc.O_CREAT | posix_ipc.O_EXCL)
+        self.model_semaphore = posix_ipc.Semaphore(None, flags=posix_ipc.O_CREAT | posix_ipc.O_EXCL)
 
-        # Make sure IN-MEMORY data layers are properly configured
-        # assert_in_memory_config(self)
+    # def load_minibatch(self):
+    #     """ Reads a random sample from the replay dataset and writes it Caffe-visible
+    #         memory.
+    #     """
+    #     if self.dataset:
+    #         self.dataset.sample_direct(self.shared_arrays['state'],
+    #                                    self.shared_arrays['action'],
+    #                                    self.shared_arrays['reward'],
+    #                                    self.shared_arrays['next_state'],
+    #                                    self.batch_size)
+    #     else:
+    #         print "Warning: no dataset specified, using dummy data."
+    #         self.dummy_load_minibatch()
 
-    def add_dataset(self, dset):
-        self.dataset = dset
+    # def dummy_load_minibatch(self):
+    #     """ Writes random data into the numpy arrays.
+    #     """
+    #     self.shared_arrays['state'][...] = \
+    #         np.random.randint(0, 256, size=self.shared_arrays['state'].shape)
 
-    def load_minibatch(self):
-        """ Reads a random sample from the replay dataset and writes it Caffe-visible
-            memory.
-        """
-        if self.dataset:
-            self.dataset.sample_direct(self.state,
-                                       self.action,
-                                       self.reward,
-                                       self.next_state,
-                                       self.batch_size)
-        else:
-            print "Warning: no dataset specified, using dummy data."
-            self.dummy_load_minibatch()
+    #     # Actions matrix has a one-hot representation
+    #     random_actions = np.random.randint(0, self.action.shape[1],
+    #                                        size=(self.action.shape[0],))
 
-    def dummy_load_minibatch(self):
-        """ Writes random data into the numpy arrays.
-        """
-        self.state[...] = np.random.randint(0, 256, size=self.state.shape)
+    #     self.shared_arrays['action'][...] = np.zeros(self.action.shape)
+    #     self.shared_arrays['action'][np.arange(self.action.shape[0]),
+    #                                  random_actions] = 1
 
-        # Actions matrix has a one-hot representation
-        self.action[...] = np.zeros(self.action.shape)
-        self.action[np.arange(self.action.shape[0]),
-                    np.random.randint(0, self.action.shape[1],
-                                      size=(self.action.shape[0],))] = 1
-
-        self.reward[...] = np.random.randint(-5, 6, size=self.reward.shape)
-        self.next_state[...] = np.random.randint(0, 256, size=self.next_state.shape)
+    #     self.shared_arrays['reward'][...] = \
+    #         np.random.randint(-5, 6, size=self.reward.shape)
+    #     self.shared_arrays['next_state'][...] = \
+    #         np.random.randint(0, 256, size=self.next_state.shape)
 
     def fetch_model(self):
         """ Get model parameters from driver over the network. """
@@ -132,63 +139,53 @@ class BaristaNet:
         return response
 
     def full_pass(self):
+        self.compute_semaphore.acquire()
         self.net.forward()
         self.net.backward()
+        self.model_semaphore.release()
 
-    def select_action(self, state):
-        self.state[0] = state
-        self.net.forward(end='Q_out')
-        action = np.argmax(self.net.blobs['Q_out'].data[0], axis=0).squeeze()
-        return action
+    def forward(self, end=None):
+        self.net.forward(end=end)
+
+    def set_data(self, name, data):
+        """ Sets a portion of a memory data layer with the given data.
+
+        Args:
+            name: name of MemoryDataLayer blob that you wish to set
+            data: ndarray which matches the shape of the data blob along
+                  all axes except possibly the zeroth.
+        """
+        assert (data.shape[1:] == self.shared_arrays[name].shape[1:])
+        self.shared_arrays[name][0:data.shape[0]] = data
+
+    def get_ipc_interface(self):
+        interface = []
+        for name in self.shared_arrays:
+            handle = (self.shmem[name].name,
+                      self.shared_arrays[name].shape,
+                      str(self.shared_arrays[name].dtype))
+            interface.append(handle)
+
+        return (self.compute_semaphore.name,
+                self.model_semaphore.name,
+                interface)
+
+    def ipc_interface_str(self):
+        pass
+
+    # def select_action(self, state):
+    #     self.shared_arrays['state'][0] = state
+    #     self.net.forward(end='Q_out')
+    #     action = np.argmax(self.net.blobs['Q_out'].data[0], axis=0).squeeze()
+    #     return action
 
     def __del__(self):
-        for shmem in (self.state_shmem, self.action_shmem,
-                      self.reward_shmem, self.next_state_shmem):
+        for shmem in self.shmem.values():
             shmem.close_fd()
             shmem.unlink()
 
+        self.compute_semaphore.close()
+        self.compute_semaphore.unlink()
 
-# Auxiliary functions
-def assert_in_memory_config(barista_net):
-    print "-" * 50
-    print "Checking IN-MEMORY data layer configuration..."
-    net = barista_net.net
-    barista_net.dummy_load_minibatch()
-
-    # Nothing should be loaded in data blobs before calling net forward
-    assert(not np.all(net.blobs['state'].data == barista_net.state))
-
-    net.forward()
-    assert(np.all(net.blobs['state'].data == barista_net.state))
-    assert(np.all(net.blobs['next_state'].data == barista_net.next_state))
-    assert(np.all(net.blobs['action'].data == barista_net.action))
-    assert(np.all(net.blobs['reward'].data == barista_net.reward))
-
-    # Should read from the IN-MEMORY location directly, no copy
-    pointer_local, _ = barista_net.state.__array_interface__['data']
-    pointer_caffe, _ = net.blobs['state'].data.__array_interface__['data']
-    print "state data mem address (local):", hex(pointer_local)
-    print "state data mem address (caffe):", hex(pointer_caffe)
-    assert(pointer_local == pointer_caffe)
-
-    pointer_local, _ = barista_net.next_state.__array_interface__['data']
-    pointer_caffe, _ = net.blobs['next_state'].data.__array_interface__['data']
-    print "next_state data mem address (local):", hex(pointer_local)
-    print "next_state data mem address (caffe):", hex(pointer_caffe)
-    assert(pointer_local == pointer_caffe)
-
-    print "IN-MEMORY data layers correctly configured."
-
-
-def test_action_selection():
-    baristanet = BaristaNet('models/deepq/train_val.prototxt',
-                            'models/deepq/deepq.caffemodel',
-                            'Augustus')
-
-    for _ in xrange(10):
-        state = np.random.rand(4, 128, 128)
-        opt_action = baristanet.select_action(state)
-        print opt_action
-
-if __name__ == "__main__":
-    test_action_selection()
+        self.model_semaphore.close()
+        self.model_semaphore.unlink()
