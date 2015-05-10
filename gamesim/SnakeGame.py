@@ -255,16 +255,3 @@ class SnakeGame(object):
                 direction = raw_input("Invalid input.\n" +
                                       "Use 'wasd' for direction control: ")
             state = self.human_play(state, direction)
-
-    def gray_scale(self, state_array):
-        gray_array = np.zeros((_NX, _NY), dtype='uint8')
-        for y in range(_NY):
-            for x in range(_NX):
-                if state_array[x, y] == _APPLE:
-                    gray_array[x, y] = _APPLE_COLOR
-                elif state_array[x, y] != _EMPTY_CELL:
-                    if state_array[x, y] != 0:
-                        gray_array[x, y] = _BODY_COLOR
-                    else:
-                        gray_array[x, y] = _HEAD_COLOR
-        return gray_array

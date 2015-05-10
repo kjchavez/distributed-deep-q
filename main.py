@@ -16,11 +16,12 @@ import barista
 from barista.baristanet import BaristaNet
 from replay import ReplayDataset
 from gamesim.SnakeGame import SnakeGame
-from ExpGain import ExpGain, resampler
+from ExpGain import ExpGain, generate_preprocessor
 
 # Modules necessary only for faking Experience Gainer
 import random
 import numpy as np
+
 
 def process_connection(socket, net, exp_gain, iter_num=1):
     message = ""
@@ -96,7 +97,7 @@ def main():
     net.add_dataset(replay_dataset)
 
     game = SnakeGame()
-    preprocessor = resampler(net.state.shape[2:])
+    preprocessor = generate_preprocessor(net.state.shape[2:])
     exp_gain = ExpGain(net, ['w','a','s','d'], preprocessor, game.cpu_play, replay_dataset,
                        game.encode_state())
 
