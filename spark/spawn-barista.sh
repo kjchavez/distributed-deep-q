@@ -1,6 +1,6 @@
 #!/bin/bash
 mkdir -p logs
-export PYTHONPATH=$PYTHONPATH:/home/kevin/Code/caffe/python
+export PYTHONPATH=$PYTHONPATH:/home/kevin/CME323/project/caffe/python
 pwd > logs/spawn.log
 echo "PYTHONPATH" >> logs/spawn.log
 echo $PYTHONPATH >> logs/spawn.log

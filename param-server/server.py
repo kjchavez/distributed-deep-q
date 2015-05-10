@@ -4,7 +4,7 @@ from redis import Redis
 import redis_collections as redisC
 import pdb
 
-
+SGD_ALPHA = 0.01
 app = Flask(__name__)
 
 
@@ -25,7 +25,7 @@ def get_model_params():
 def update_params():
   updateParams = messaging.load_gradient_message(request.data, compressed = False)
   print updateParams['Qconv1'][0]
-  update(updateParams)
+  SGDUpdate(updateParams)
   return Response("Updated", status=200)
 
 @app.route('/api/v1/clear_model', methods=['POST'])
@@ -34,11 +34,13 @@ def clear_params():
   model.clear()
   return Response("Cleared", status=200)
 
-def update(params):
+def SGDUpdate(params):
   # get model stored in redis
   model = redisC.Dict(key="centralModel")
-  model.update(params)
-  return
+  for k in model:
+    for i in range(len(model[k])):
+      model[k][i] -= SGD_ALPHA*params[k][i]
+  return 
 
 def initParams():
   redisInstance = Redis(host='localhost', port=6379, db=0)
