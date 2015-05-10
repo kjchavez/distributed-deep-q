@@ -15,13 +15,14 @@ _NULL_DIR = "n"
 _NULL_POS = (-1, -1)
 _EMPTY_CELL = -1
 _APPLE = -2
+_HEAD = 0
 _GRID = {(i, j) for i in range(_NX) for j in range(_NY)}
 _SCORE_GROW = 1
 _SCORE_MOVE = 0
 _SCORE_GAME_OVER = -_NX * _NY
-_APPLE_COLOR = 150
-_BODY_COLOR = 250
-_HEAD_COLOR = 200
+_APPLE_COLOR = np.uint8(100)
+_BODY_COLOR = np.uint8(255)
+_HEAD_COLOR = np.uint8(200)
 
 
 # game objects
@@ -255,3 +256,21 @@ class SnakeGame(object):
                 direction = raw_input("Invalid input.\n" +
                                       "Use 'wasd' for direction control: ")
             state = self.human_play(state, direction)
+
+
+def gray_scale(state_array):
+    nc, nx, ny = state_array.shape
+    gray_array = np.zeros((nc, nx, ny), dtype='uint8')
+
+    for y in range(ny):
+        for x in range(nx):
+            for c in range(nc):
+                if state_array[c, x, y] == _APPLE:
+                    gray_array[c, x, y] = _APPLE_COLOR
+                elif state_array[c, x, y] != _EMPTY_CELL:
+                    if state_array[c, x, y] != _HEAD:
+                        gray_array[c, x, y] = _BODY_COLOR
+                    else:
+                        gray_array[c, x, y] = _HEAD_COLOR
+
+    return gray_array

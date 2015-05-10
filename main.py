@@ -15,7 +15,7 @@ from caffe import SGDSolver
 import barista
 from barista.baristanet import BaristaNet
 from replay import ReplayDataset
-from gamesim.SnakeGame import SnakeGame
+from gamesim.SnakeGame import SnakeGame, gray_scale
 from ExpGain import ExpGain, generate_preprocessor
 
 # Modules necessary only for faking Experience Gainer
@@ -57,6 +57,7 @@ def process_connection(socket, net, exp_gain, iter_num=1):
     socket.close()
     print "Closed connection"
 
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("architecture")
@@ -93,13 +94,14 @@ def main():
     # Initialize objects
     net = BaristaNet(args.architecture, args.model, args.driver)
     replay_dataset = ReplayDataset(args.dataset, net.state[0].shape,
-                         dset_size=args.dset_size, overwrite=args.overwrite)
+                                   dset_size=args.dset_size,
+                                   overwrite=args.overwrite)
     net.add_dataset(replay_dataset)
 
     game = SnakeGame()
-    preprocessor = generate_preprocessor(net.state.shape[2:])
-    exp_gain = ExpGain(net, ['w','a','s','d'], preprocessor, game.cpu_play, replay_dataset,
-                       game.encode_state())
+    preprocessor = generate_preprocessor(net.state.shape[2:], gray_scale)
+    exp_gain = ExpGain(net, ['w', 'a', 's', 'd'], preprocessor, game.cpu_play,
+                       replay_dataset, game.encode_state())
 
     for _ in xrange(50):
         exp_gain.generate_experience(1e8)
@@ -113,7 +115,7 @@ def main():
     print "*"*80
     print "* Starting BARISTA server: listening on port %d." % args.port
     print "*"*80
-    with open('flags/__BARISTA_READY__','w') as fp:
+    with open('flags/__BARISTA_READY__', 'w') as fp:
         pass
 
     while True:

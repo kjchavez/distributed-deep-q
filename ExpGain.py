@@ -8,32 +8,6 @@ _EPSILON_MAX = 1.0
 _EPSILON_MIN = 0.1
 _NFRAME = 4
 
-_APPLE_COLOR = 150
-_BODY_COLOR = 250
-_HEAD_COLOR = 200
-_EMPTY_CELL = -1
-_APPLE = -2
-
-
-def gray_scale(state_array):
-    nc, nx, ny = state_array.shape
-    gray_frame = np.zeros((nx, ny), dtype='uint8')
-    for y in range(ny):
-        for x in range(nx):
-            if state_array[0, x, y] == _APPLE:
-                gray_frame[x, y] = _APPLE_COLOR
-            elif state_array[0, x, y] != _EMPTY_CELL:
-                if state_array[0, x, y] != 0:
-                    gray_frame[x, y] = _BODY_COLOR
-                else:
-                    gray_frame[x, y] = _HEAD_COLOR
-
-    gray_array = np.zeros((nc, nx, ny), dtype='uint8')
-    for c in range(nc):
-        gray_array[c, :, :] = gray_frame
-
-    return gray_array
-
 
 def resampler(size):
     def func(state):
@@ -44,7 +18,7 @@ def resampler(size):
     return func
 
 
-def generate_preprocessor(size):
+def generate_preprocessor(size, gray_scale):
     resamp = resampler(size)
 
     def preprocessor(state):
