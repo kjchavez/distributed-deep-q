@@ -17,17 +17,21 @@ _APPLE = -2
 
 def gray_scale(state_array):
     nc, nx, ny = state_array.shape
-    gray_array = np.zeros((nc, nx, ny), dtype='uint8')
+    gray_frame = np.zeros((nx, ny), dtype='uint8')
     for y in range(ny):
         for x in range(nx):
-            for c in range(nc):
-                if state_array[1, x, y] == _APPLE:
-                    gray_array[c, x, y] = _APPLE_COLOR
-                elif state_array[1, x, y] != _EMPTY_CELL:
-                    if state_array[1, x, y] != 0:
-                        gray_array[c, x, y] = _BODY_COLOR
-                    else:
-                        gray_array[c, x, y] = _HEAD_COLOR
+            if state_array[0, x, y] == _APPLE:
+                gray_frame[x, y] = _APPLE_COLOR
+            elif state_array[0, x, y] != _EMPTY_CELL:
+                if state_array[0, x, y] != 0:
+                    gray_frame[x, y] = _BODY_COLOR
+                else:
+                    gray_frame[x, y] = _HEAD_COLOR
+
+    gray_array = np.zeros((nc, nx, ny), dtype='uint8')
+    for c in range(nc):
+        gray_array[c, :, :] = gray_frame
+
     return gray_array
 
 
