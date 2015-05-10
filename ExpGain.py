@@ -8,13 +8,15 @@ _EPSILON_MAX = 1.0
 _EPSILON_MIN = 0.1
 _NFRAME = 4
 
+
 def resampler(size):
     def func(state):
-        zoom_factor = (1.,float(size[0])/state.shape[1],
+        zoom_factor = (1., float(size[0])/state.shape[1],
                        float(size[1])/state.shape[2])
         return scipy.ndimage.zoom(state, zoom_factor, order=0)
 
     return func
+
 
 class ExpGain(object):
     def __init__(self, net, actions, preprocessor, game, dataset, init_state):
@@ -42,7 +44,7 @@ class ExpGain(object):
 
     def arrayify_frames(self):
         nx, ny = self.sequence[0].shape
-        array = np.zeros((_NFRAME, ny, nx), dtype=np.int)
+        array = np.zeros((_NFRAME, ny, nx), dtype='uint8')
         for frame in range(_NFRAME):
             array[frame] = self.sequence[frame]
         return array
@@ -54,5 +56,6 @@ class ExpGain(object):
         self.sequence.popleft()
         self.sequence.append(new_state)
         self.dataset.add_experience(
-            self.actions.index(action), reward, self.preprocessor(self.arrayify_frames())
+            self.actions.index(action), reward,
+            self.preprocessor(self.arrayify_frames())
         )
