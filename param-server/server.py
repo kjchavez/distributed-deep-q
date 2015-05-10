@@ -37,8 +37,8 @@ def clear_params():
 def update(params):
   # get model stored in redis
   model = redisC.Dict(key="centralModel")
-  model.update(d)
-  return 
+  model.update(params)
+  return
 
 def initParams():
   redisInstance = Redis(host='localhost', port=6379, db=0)

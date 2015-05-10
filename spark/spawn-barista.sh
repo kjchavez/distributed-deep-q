@@ -7,7 +7,7 @@ echo $PYTHONPATH >> logs/spawn.log
 
 mkdir -p flags
 rm -f flags/__BARISTA_READY__
-python -m barista models/deepq/train_val.prototxt models/deepq/deepq.caffemodel --dataset rdset.hdf5 &> logs/barista.log &
+python main.py models/deepq/train_val.prototxt models/deepq/deepq16.caffemodel --dataset rdset.hdf5 --solver models/deepq/solver.prototxt &> logs/barista.log &
 echo "Called successfully" >> logs/spawn.log
 
 # Wait until server is ready

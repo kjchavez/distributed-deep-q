@@ -34,7 +34,7 @@ def process_connection(socket, net, exp_gain, iter_num=1):
         exp_gain.generate_experience(iter_num)
         print "Processing gradient update request:"
         print "- Fetching model..."
-        net.dummy_fetch_model()
+        net.fetch_model()
         print "- Loading minibatch..."
         net.load_minibatch()
         print "- Running Caffe..."
@@ -43,7 +43,7 @@ def process_connection(socket, net, exp_gain, iter_num=1):
         toc = time.time()
         print "Caffe took % 0.2f milliseconds." % (1000 * (toc - tic))
         print "- Generating/sending gradient message..."
-        response = net.dummy_send_gradient_update()
+        response = net.send_gradient_update()
         socket.send(response)
 
     elif message == barista.DARWIN_UPDATE:
@@ -119,7 +119,7 @@ def main():
         (clientsocket, address) = serversocket.accept()
         print "Accepted connection"
         client_thread = threading.Thread(target=process_connection,
-                                         args=(clientsocket, net))
+                                         args=(clientsocket, net, exp_gain))
         client_thread.run()
 
 if __name__ == "__main__":

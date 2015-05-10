@@ -17,8 +17,9 @@ sc = SparkContext(conf=conf)
 # Start up Barista processes
 script_path = "spark/spawn-barista.sh"
 rdd = sc.parallelize([1]).pipe(script_path)
-print rdd.collect()
+rdd.collect()
 
-steps = sc.parallelize(range(10))
+N = 20
+steps = sc.parallelize(range(N))
 res = steps.map(sgd_step)
 print res.collect()
