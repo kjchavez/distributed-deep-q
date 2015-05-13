@@ -184,8 +184,7 @@ class BaristaNet:
             shmem.close_fd()
             shmem.unlink()
 
-        self.compute_semaphore.close()
         self.compute_semaphore.unlink()
-
-        self.model_semaphore.close()
+        self.compute_semaphore.close()
         self.model_semaphore.unlink()
+        self.model_semaphore.close()

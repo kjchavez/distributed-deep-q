@@ -31,7 +31,7 @@ class Customer(object):
 
     def __del__(self):
         for shmem in self.shmem.values():
-            shmem.close()
+            shmem.close_fd()
 
         self.compute_semaphore.close()
         self.model_semaphore.close()
