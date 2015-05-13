@@ -77,6 +77,10 @@ class BaristaNet:
 
     def fetch_model(self):
         """ Get model parameters from driver over the network. """
+        if self.driver is None:
+            self.dummy_fetch_model()
+            return
+
         request = urllib2.Request(
                     'http://%s/api/v1/latest_model' % self.driver,
                     headers={'Content-Type': 'application/deepQ'})
@@ -94,6 +98,9 @@ class BaristaNet:
         """ Sends message as HTTP request; blocks until response is received.
         Raises URLError if cannot be reach driver.
         """
+        if self.driver is None:
+            return self.dummy_send_gradient_update()
+
         message = create_gradient_message(self.net)
         try:
             request = urllib2.Request(

@@ -70,7 +70,7 @@ def debug_process_connection(socket, net, exp_gain, iter_num=1):
         exp_gain.generate_experience(iter_num)
         print "Processing gradient update request:"
         print "- Fetching model..."
-        net.dummy_fetch_model()
+        net.fetch_model()
         print "- Loading minibatch..."
         net.load_minibatch()
 
@@ -97,7 +97,7 @@ def debug_process_connection(socket, net, exp_gain, iter_num=1):
         print "Loss:", loss
 
         print "- Generating/sending gradient message..."
-        response = net.dummy_send_gradient_update()
+        response = net.send_gradient_update()
         net.log()
         socket.send(response)
 
@@ -125,7 +125,11 @@ def get_args():
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--debug", action="store_true")
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.driver == "None":
+        args.driver = None
+
+    return args
 
 
 def main():
