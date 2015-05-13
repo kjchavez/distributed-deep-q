@@ -3,6 +3,7 @@ barista/*.pyc
 models/*/*.caffemodel
 caffe/*
 flags/
+logs/
 
 # Compiled source #
 ###################
