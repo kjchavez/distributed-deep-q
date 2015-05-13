@@ -7,13 +7,13 @@ import time
 import argparse
 import socket
 import threading
-import urllib2
 
 import caffe
 from caffe import SGDSolver
 
 import barista
 from barista.baristanet import BaristaNet
+from barista import netutils
 from replay import ReplayDataset
 from gamesim.SnakeGame import SnakeGame, gray_scale
 from ExpGain import ExpGain, generate_preprocessor
@@ -23,7 +23,42 @@ import random
 import numpy as np
 
 
-def process_connection(socket, net, exp_gain, iter_num=1):
+def recv_all(socket, size):
+    message = ""
+    while len(message) < size:
+        chunk = socket.recv(4096)
+        if not chunk:
+            break
+        message += chunk
+
+    return message
+
+
+def process_connection(socket, net, exp_gain, iter_num=1, log_frequency=50):
+    print "Processing...",
+    message = recv_all(socket, barista.MSG_LENGTH)
+    if message == barista.GRAD_UPDATE:
+        exp_gain.generate_experience(iter_num)
+        net.fetch_model()
+        net.load_minibatch()
+        net.full_pass()
+        response = net.send_gradient_update()
+        if iter_num % log_frequency == 0:
+            net.log()
+        socket.send(response)
+
+    elif message == barista.DARWIN_UPDATE:
+        raise NotImplementedError("Cannot process request " + message +
+                                  "; Darwinian SGD not implemented")
+
+    else:
+        print "Unknown request:", message
+
+    socket.close()
+    print "done."
+
+
+def debug_process_connection(socket, net, exp_gain, iter_num=1):
     message = ""
     while len(message) < barista.MSG_LENGTH:
         chunk = socket.recv(4096)
@@ -35,16 +70,35 @@ def process_connection(socket, net, exp_gain, iter_num=1):
         exp_gain.generate_experience(iter_num)
         print "Processing gradient update request:"
         print "- Fetching model..."
-        net.fetch_model()
+        net.dummy_fetch_model()
         print "- Loading minibatch..."
         net.load_minibatch()
+
         print "- Running Caffe..."
         tic = time.time()
         net.full_pass()
         toc = time.time()
-        print "Caffe took % 0.2f milliseconds." % (1000 * (toc - tic))
+        print "    * Caffe took % 0.2f milliseconds." % (1000 * (toc - tic))
+
+        # Compute debug info
+        param_norms = netutils.compute_param_norms(net.net)
+        grad_norms = netutils.compute_gradient_norms(net.net)
+        loss = netutils.extract_net_data(net.net, ('loss',))['loss']
+
+        print
+        print "Parameter norms:"
+        print "-"*50
+        netutils.pretty_print(param_norms)
+        print
+        print "Gradient norms:"
+        print "-"*50
+        netutils.pretty_print(grad_norms)
+        print
+        print "Loss:", loss
+
         print "- Generating/sending gradient message..."
-        response = net.send_gradient_update()
+        response = net.dummy_send_gradient_update()
+        net.log()
         socket.send(response)
 
     elif message == barista.DARWIN_UPDATE:
@@ -69,6 +123,7 @@ def get_args():
     parser.add_argument("--dataset", default="replay-dataset.hdf5")
     parser.add_argument("--dset-size", dest="dset_size", type=int, default=1000)
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--debug", action="store_true")
 
     return parser.parse_args()
 
@@ -92,7 +147,9 @@ def main():
         solver.net.save(args.model)
 
     # Initialize objects
-    net = BaristaNet(args.architecture, args.model, args.driver)
+    net = BaristaNet(args.architecture, args.model, args.driver,
+                     reset_log=True)
+
     replay_dataset = ReplayDataset(args.dataset, net.state[0].shape,
                                    dset_size=args.dset_size,
                                    overwrite=args.overwrite)
@@ -120,9 +177,14 @@ def main():
 
     while True:
         (clientsocket, address) = serversocket.accept()
-        print "Accepted connection"
-        client_thread = threading.Thread(target=process_connection,
-                                         args=(clientsocket, net, exp_gain))
+        if args.debug:
+            handler = debug_process_connection
+        else:
+            handler = process_connection
+
+        client_thread = threading.Thread(
+                            target=handler,
+                            args=(clientsocket, net, exp_gain))
         client_thread.run()
 
 if __name__ == "__main__":

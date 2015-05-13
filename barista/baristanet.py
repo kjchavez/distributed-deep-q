@@ -1,20 +1,28 @@
-import time
+import os
 import urllib2
 import numpy as np
 import caffe
 import barista
+
+from barista import netutils
 from barista.messaging import create_gradient_message
 from barista.messaging import create_model_message
 from barista.messaging import load_model_message
 
 
 class BaristaNet:
-    def __init__(self, architecture, model, driver, dataset=None):
+    def __init__(self, architecture, model, driver,
+                 dataset=None, logpath=None, reset_log=False):
         self.net = caffe.Net(architecture, model)
         self.dataset = dataset
 
         # TODO: set extra model parameters?
         self.driver = driver
+
+        if logpath is None:
+            logpath = os.path.join("logs", model.split('/')[-1].split('.')[0])
+
+        self.logger = netutils.NetLogger(self.net, logpath, reset=reset_log)
 
         assert('state' in self.net.blobs and 'action' in self.net.blobs and
                'reward' in self.net.blobs and 'next_state' in self.net.blobs)
@@ -119,6 +127,8 @@ class BaristaNet:
         action = np.argmax(self.net.blobs['Q_out'].data[0], axis=0).squeeze()
         return action
 
+    def log(self):
+        self.logger.write()
 
 # Auxiliary functions
 def assert_in_memory_config(barista_net):
