@@ -63,39 +63,6 @@ class BaristaNet:
         self.compute_semaphore = posix_ipc.Semaphore(None, flags=posix_ipc.O_CREAT | posix_ipc.O_EXCL)
         self.model_semaphore = posix_ipc.Semaphore(None, flags=posix_ipc.O_CREAT | posix_ipc.O_EXCL)
 
-    # def load_minibatch(self):
-    #     """ Reads a random sample from the replay dataset and writes it Caffe-visible
-    #         memory.
-    #     """
-    #     if self.dataset:
-    #         self.dataset.sample_direct(self.shared_arrays['state'],
-    #                                    self.shared_arrays['action'],
-    #                                    self.shared_arrays['reward'],
-    #                                    self.shared_arrays['next_state'],
-    #                                    self.batch_size)
-    #     else:
-    #         print "Warning: no dataset specified, using dummy data."
-    #         self.dummy_load_minibatch()
-
-    # def dummy_load_minibatch(self):
-    #     """ Writes random data into the numpy arrays.
-    #     """
-    #     self.shared_arrays['state'][...] = \
-    #         np.random.randint(0, 256, size=self.shared_arrays['state'].shape)
-
-    #     # Actions matrix has a one-hot representation
-    #     random_actions = np.random.randint(0, self.action.shape[1],
-    #                                        size=(self.action.shape[0],))
-
-    #     self.shared_arrays['action'][...] = np.zeros(self.action.shape)
-    #     self.shared_arrays['action'][np.arange(self.action.shape[0]),
-    #                                  random_actions] = 1
-
-    #     self.shared_arrays['reward'][...] = \
-    #         np.random.randint(-5, 6, size=self.reward.shape)
-    #     self.shared_arrays['next_state'][...] = \
-    #         np.random.randint(0, 256, size=self.next_state.shape)
-
     def fetch_model(self):
         """ Get model parameters from driver over the network. """
         request = urllib2.Request(
@@ -129,7 +96,7 @@ class BaristaNet:
         return response
 
     def dummy_send_gradient_update(self):
-        message = create_gradient_message(self.net)
+        create_gradient_message(self.net)
         p = np.random.rand()
         if p < 0.98:
             response = "OK"
@@ -147,17 +114,6 @@ class BaristaNet:
     def forward(self, end=None):
         self.net.forward(end=end)
 
-    def set_data(self, name, data):
-        """ Sets a portion of a memory data layer with the given data.
-
-        Args:
-            name: name of MemoryDataLayer blob that you wish to set
-            data: ndarray which matches the shape of the data blob along
-                  all axes except possibly the zeroth.
-        """
-        assert (data.shape[1:] == self.shared_arrays[name].shape[1:])
-        self.shared_arrays[name][0:data.shape[0]] = data
-
     def get_ipc_interface(self):
         interface = []
         for name in self.shared_arrays:
@@ -171,13 +127,14 @@ class BaristaNet:
                 interface)
 
     def ipc_interface_str(self):
-        pass
+        interface_str = ""
+        comp_sem, model_sem, interface = self.get_ipc_interface()
+        interface_str += comp_sem + '\n'
+        interface_str += model_sem + '\n'
+        for name, shape, dtype in interface:
+            interface_str += ':'.join([name, str(shape), dtype]) + '\n'
 
-    # def select_action(self, state):
-    #     self.shared_arrays['state'][0] = state
-    #     self.net.forward(end='Q_out')
-    #     action = np.argmax(self.net.blobs['Q_out'].data[0], axis=0).squeeze()
-    #     return action
+        return interface_str
 
     def __del__(self):
         for shmem in self.shmem.values():

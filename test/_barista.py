@@ -87,6 +87,8 @@ def main(architecture, model):
     barista_net = BaristaNet(architecture, model, None)
     write_ipc_interface(barista_net, 'ipc.out')
 
+    print "Barista running. Waiting on compute semaphore:",
+    print barista_net.compute_semaphore
     for i in range(5):
         barista_net.full_pass()
         print "Completed full pass #%d" % i
