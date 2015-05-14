@@ -28,7 +28,7 @@ def update_params():
   SGDUpdate(updateParams)
   return Response("Updated", status=200)
 
-@app.route('/api/v1/clear_model', methods=['POST'])
+@app.route('/api/v1/clear_model', methods=['GET'])
 def clear_params():
   model = redisC.Dict(key="centralModel")
   model.clear()
@@ -37,12 +37,16 @@ def clear_params():
 def SGDUpdate(params):
   # get model stored in redis
   model = redisC.Dict(key="centralModel")
+  print model
   for k in params:
     if k not in model:
       model[k] = []
     for i in range(len(params[k])):
       if len(model[k]) < (i+1):
-        model[k].append(np.zeros(len(params[k][i])))
+        arr = model[k]
+        arr.append(np.zeros(params[k][i].shape))
+        model[k] = arr
+      # pdb.set_trace()
       model[k][i] -= SGD_ALPHA*params[k][i]
   return 
 
