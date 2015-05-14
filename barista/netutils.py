@@ -60,7 +60,8 @@ class NetLogger:
     def __init__(self, net, path, reset=False):
         self.path = path
         if reset:
-            shutil.rmtree(path)
+            if os.path.isdir(path):
+                shutil.rmtree(path)
 
         if not os.path.isdir(path):
             os.makedirs(path)
