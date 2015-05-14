@@ -111,6 +111,13 @@ def debug_process_connection(socket, net, exp_gain, iter_num=1):
     socket.close()
     print "Closed connection"
 
+def issue_ready_signal():
+    if not os.path.isdir("flags"):
+        os.makedirs("flags")
+
+    with open('flags/__BARISTA_READY__', 'w') as fp:
+        pass
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -176,9 +183,8 @@ def main():
     print "*"*80
     print "* Starting BARISTA server: listening on port %d." % args.port
     print "*"*80
-    with open('flags/__BARISTA_READY__', 'w') as fp:
-        pass
-
+    # Signal Spark Executor that Barista is ready to receive connections
+    issue_ready_signal()
     while True:
         (clientsocket, address) = serversocket.accept()
         if args.debug:

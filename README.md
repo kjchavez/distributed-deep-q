@@ -34,11 +34,6 @@ Each worker machine must have Caffe installed (preferably in the same location) 
 
 In any case, be sure that each worker's PYTHONPATH includes the *caffe/python* directory. The driver should also have a proper Caffe installation.
 
-Set a couple of environment variables:
-    
-    export DDQ_ROOT=<path-to-project>
-    export PYTHONPATH=$PYTHONPATH:$DDQ_ROOT:$DDQ_ROOT/caffe/python
-
 Fire up the redis and parameter servers,
 
     redis-server
@@ -54,6 +49,8 @@ We can now run the application using spark-submit. We will need to include the f
 
 And the following non-python files:
 - models/deepq/train_val.prototxt
+- models/deepq/deepq16.caffemodel
+- models/deepq/solver.prototxt
 
 You can create the zipped python packages using
 
@@ -62,9 +59,7 @@ You can create the zipped python packages using
 
 Then submit the ddq.py script using spark-submit:
 
-    spark-submit --master local --py-files <python files, comma-separated>, --files <regular files, comma-separated> ddq.py
-
-Both stdout and stderr from the Barista server are redirected to a file in the logs directory.
+    spark-submit --master local --py-files <python files, comma-separated> --files <regular files, comma-separated> ddq.py
 
 #### Common Errors
 - **socket.error: [Errno 99] Cannot assign requested address.** If there is a complaint about "localhost" in the message, check your /etc/hosts file and make sure the line "127.0.0.1 localhost" is present.
