@@ -1,43 +1,72 @@
 # Distributed Deep Q Learning
 
 ## Getting Started
-Caffe is included as a submodule in this project, with a few modifications to the pycaffe interface. The easiest way to get up and running with Distributed Deep Q is to use this submodule. If you already have Caffe installed, there's a quicker way, which we'll describe next.
+A slighted out-of-date version of Caffe is included as a submodule in this project, with a few modifications to the pycaffe interface. The easiest way to get up and running with Distributed Deep Q is to use this submodule.
 
 ### Using the submodule
-There is a *caffe* sub-directory in the project root folder. If you cloned the project with the --recursive flag, all of the files should be there. Otherwise, it'll be empty and you should do the following:
+If you cloned the project with the --recursive flag, all of the Caffe source files should be in the **caffe** sub-directory. Otherwise, it'll be empty and you should do the following:
 
-    cd caffe; git submodule init; git submodule update;
+    git submodule init; git submodule update;
 
-Follow the instructions at [http://caffe.berkeleyvision.org/installation.html](http://caffe.berkeleyvision.org/installation.html) to build Caffe and pycaffe.
+Then follow the instructions at [http://caffe.berkeleyvision.org/installation.html](http://caffe.berkeleyvision.org/installation.html) to build Caffe and pycaffe.
 
 ## Local Testing
+### Without Spark
+Start a Redis server instance.
 
-### Parameter server on driver
+    redis-server
+
+Fire up the parameter server.
+
+    python param-server/server.py models/deepq/solver.protoxt --reset
+
+In a separate terminal, start the Barista application with
+
+    python main.py models/deepq/train_val.prototxt models/deepq/deepq16.caffemodel [--debug]
+
+The debug flag is optional; it will print some information about the parameter and gradient norms. Finally, you may simulate a request from a Spark executor by running the dummy client from the Barista package:
+
+    python -m barista.dummy_client
+
+### With Spark
+#### Environment
+Each worker machine must have Caffe installed (preferably in the same location) for Distributed Deep Q to work properly. Alternatively, if your workers are sufficiently homogenous, you can build the distribution version of Caffe on the driver, and send this to the workers when submitting the job.
+
+In any case, be sure that each worker's PYTHONPATH includes the *caffe/python* directory. The driver should also have a proper Caffe installation.
+
 Set a couple of environment variables:
     
     export DDQ_ROOT=<path-to-project>
     export PYTHONPATH=$PYTHONPATH:$DDQ_ROOT:$DDQ_ROOT/caffe/python
 
-Go to the project's root directory
+Fire up the redis and parameter servers,
 
-    cd $DDQ_ROOT
+    redis-server
+    python param-server/server.py models/deepq/solver.protoxt --reset
 
-and fire up the parameter server
+#### Submitting the job
+We can now run the application using spark-submit. We will need to include the following python files/packages with the job submission:
+- main.py
+- replay.py
+- ExpGain.py
+- gamesim.zip
+- barista.zip
 
-    python param-server/server.py
+And the following non-python files:
+- models/deepq/train_val.prototxt
 
-### Submitting the job
-Move to a separate terminal, also in the project root directory. If you haven't already done so, create a zip file of the barista package:
+You can create the zipped python packages using
 
-    zip -r barista barista
+    zip barista barista/*.py
+    zip gamesim gamesim/*.py
 
 Then submit the ddq.py script using spark-submit:
 
-    spark-submit --master local --py-files barista.zip,replay.py ddq.py
+    spark-submit --master local --py-files <python files, comma-separated>, --files <regular files, comma-separated> ddq.py
 
 Both stdout and stderr from the Barista server are redirected to a file in the logs directory.
 
-### Common Errors
+#### Common Errors
 - **socket.error: [Errno 99] Cannot assign requested address.** If there is a complaint about "localhost" in the message, check your /etc/hosts file and make sure the line "127.0.0.1 localhost" is present.
 - **Output of spark-submit hangs.** Check logs/barista.log. If its the error: "socket.error: [Errno 98] Address already in use" then use:
 
@@ -47,7 +76,7 @@ Both stdout and stderr from the Barista server are redirected to a file in the l
 
         kill -9 <pid>
 
-    Then try spark-submitting again.
+    Then try spark-submitting again. If the status is TIME_WAIT, just wait a bit and call netstat again. 
 
 ## Open Questions
 - Think about how we might use broadcast/accumulate Spark functions to simplify our parameter server
