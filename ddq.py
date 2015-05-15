@@ -23,9 +23,12 @@ def spawn_barista(idx):
     if os.path.isfile("flags/__BARISTA_READY__"):
         os.remove("flags/__BARISTA_READY__")
 
+    out = open(os.path.join(root, "barista.log"),'w')
     subprocess.Popen(["python", main, architecture, model,
                       "--dataset", "dset.hdf5",
-                      "--solver", solver])
+                      "--solver", solver],
+                     stdout=out,
+                     stderr=subprocess.STDOUT)
 
     while not os.path.isfile("flags/__BARISTA_READY__"):
         pass
