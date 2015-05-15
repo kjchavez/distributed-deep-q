@@ -111,11 +111,11 @@ def debug_process_connection(socket, net, exp_gain, iter_num=1):
     socket.close()
     print "Closed connection"
 
-def issue_ready_signal():
+def issue_ready_signal(idx):
     if not os.path.isdir("flags"):
         os.makedirs("flags")
 
-    with open('flags/__BARISTA_READY__', 'w') as fp:
+    with open('flags/__BARISTA_READY__.%d' % idx, 'w') as fp:
         pass
 
 
@@ -176,6 +176,7 @@ def main():
 
     # Start server loop
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serversocket.bind(('127.0.0.1', args.port))
     serversocket.listen(5)
 
@@ -184,7 +185,7 @@ def main():
     print "* Starting BARISTA server: listening on port %d." % args.port
     print "*"*80
     # Signal Spark Executor that Barista is ready to receive connections
-    issue_ready_signal()
+    issue_ready_signal(args.port)
     while True:
         (clientsocket, address) = serversocket.accept()
         if args.debug:
