@@ -79,10 +79,16 @@ Then submit the ddq.py script using spark-submit:
 - [DDQ] Test a *single-process* version of the ddq application by spawning a Barista object inside the **train_partition** function, rather than using Popen.
 - [PARAM-SERVER] Add functionality to periodically save a snapshot of the model.
 - [PARAM-SERVER] Implement RMSProp or AdaGrad updates.
+- [PARAM-SERVER] Decide when to send a new "target" model (known as P in the .prototxt)
 - [EXP-GAIN] Add visualization of game frames and action selection.
 - [UTILS] Implement script to evaluate the policy implied by a saved model. (i.e. Use model to play game many times and compute average score)
 
+### Lower Priority
+- [SPARK] Implement wrapper class(es) for easy use from within Spark.
+- [AWS] Figure out how to run our pipeline on AWS. 
+
 ## Open Questions
+- AWS? [https://github.com/BVLC/caffe/wiki/Caffe-on-EC2-Ubuntu-14.04-Cuda-7](https://github.com/BVLC/caffe/wiki/Caffe-on-EC2-Ubuntu-14.04-Cuda-7)
 - Think about how we might use broadcast/accumulate Spark functions to simplify our parameter server
 - Might the existence of [dataframes](https://databricks.com/blog/2015/02/17/introducing-dataframes-in-spark-for-large-scale-data-science.html) be helpful?
 - [https://spark.apache.org/docs/latest/submitting-applications.html](https://spark.apache.org/docs/latest/submitting-applications.html)  
