@@ -1,6 +1,7 @@
 import os
 import shutil
 import numpy as np
+from datetime import datetime
 
 
 def compute_gradient_norms(caffe_net, params=None, ord=None):
@@ -58,11 +59,7 @@ def pretty_print(param_dict):
 
 class NetLogger:
     def __init__(self, net, path, reset=False):
-        self.path = path
-        if reset:
-            if os.path.isdir(path):
-                shutil.rmtree(path)
-
+        self.path = path + str(datetime.now())
         if not os.path.isdir(path):
             os.makedirs(path)
 
