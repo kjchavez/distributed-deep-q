@@ -35,8 +35,14 @@ class ExpGain(object):
         self.game = game                    # game updater
         self.dataset = dataset              # replay_dataset object
         self.sequence = deque()             # sequence of frames
+        self.init_state = init_state        # initial state
         for _ in range(_NFRAME):
             self.sequence.append(init_state)
+
+    def reset_game(self):
+        self.sequence = deque()
+        for _ in range(_NFRAME):
+            self.sequence.append(self.init_state)
 
     def select_action(self, pstate, epsilon):
         if random.random() < epsilon:
@@ -64,7 +70,22 @@ class ExpGain(object):
         new_state, reward = self.game(self.sequence[-1], action)
         self.sequence.popleft()
         self.sequence.append(new_state)
-        self.dataset.add_experience(
-            self.actions.index(action), reward,
-            self.preprocessor(self.arrayify_frames())
-        )
+
+        exp_action = self.actions.index(action)
+        exp_frame = self.preprocessor(self.arrayify_frames())
+        self.dataset.add_experience(exp_action, reward, exp_frame)
+        self.record(exp_action, reward, exp_frame)
+
+        if reward < 0:  # game over
+            self.reset_game()
+
+    # TODO: decide *.out file directory
+    def record(self, action, reward, frame):
+        with open("actions.out", "a") as actions:
+            actions.append(str(action))
+
+        with open("rewards.out", "a") as rewards:
+            rewards.append(str(reward))
+
+        with open("frames.out", "a") as frames:
+            frames.append(str(frame))

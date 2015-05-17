@@ -28,17 +28,6 @@ def get_model_params():
     return Response(m, status=200)
 
 
-@app.route('/api/v1/update_model', methods=['POST'])
-def update_params():
-    updateParams = messaging.load_gradient_message(request.data, compressed = False)
-
-    # rmsprop(updateParams)
-    adagrad(updateParams)
-
-    SGDUpdate(updateParams)
-    return Response("Updated", status=200)
-
-
 def rmsprop(updateParams):
     rmsprop = redisC.Dict(key="rmsprop")
     if not rmsprop:
@@ -55,6 +44,17 @@ def adagrad(updateParams):
     else:
         for k in updateParams:
             adagrad[k] += updateParams[k]**2
+
+
+@app.route('/api/v1/update_model', methods=['POST'])
+def update_params():
+    updateParams = messaging.load_gradient_message(request.data, compressed = False)
+
+    # rmsprop(updateParams)
+    adagrad(updateParams)
+
+    SGDUpdate(updateParams)
+    return Response("Updated", status=200)
 
 
 @app.route('/api/v1/clear_model', methods=['GET'])
