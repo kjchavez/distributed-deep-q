@@ -17,6 +17,7 @@ app = Flask(__name__)
 def hello():
     return "Param Server"
 
+
 @app.route('/api/v1/latest_model', methods=['GET'])
 def get_model_params():
     # assuming the return message would be a string(of bytes)
@@ -26,11 +27,35 @@ def get_model_params():
     # pdb.set_trace()
     return Response(m, status=200)
 
+
 @app.route('/api/v1/update_model', methods=['POST'])
 def update_params():
     updateParams = messaging.load_gradient_message(request.data, compressed = False)
+
+    # rmsprop(updateParams)
+    adagrad(updateParams)
+
     SGDUpdate(updateParams)
     return Response("Updated", status=200)
+
+
+def rmsprop(updateParams):
+    rmsprop = redisC.Dict(key="rmsprop")
+    if not rmsprop:
+        rmsprop = updateParams
+    else:
+        for k in updateParams:
+            rmsprop[k] = 0.9 * rmsprop[k] + 0.1 * updateParams[k]**2
+
+
+def adagrad(updateParams):
+    adagrad = redisC.Dict(key="adagrad")
+    if not adagrad:
+        adagrad = {k: updateParams[k]**2 for k in updateParams}
+    else:
+        for k in updateParams:
+            adagrad[k] += updateParams[k]**2
+
 
 @app.route('/api/v1/clear_model', methods=['GET'])
 def clear_params():
@@ -38,9 +63,13 @@ def clear_params():
     model.clear()
     return Response("Cleared", status=200)
 
+
 def SGDUpdate(params):
-    # get model stored in redis
+    # get model and rms_meansq stored in redis
     model = redisC.Dict(key="centralModel")
+    # rmsprop = redisC.Dict(key="rmsprop")
+    adagrad = redisC.Dict(key="adagrad")
+
     # print model
     for k in params:
         if k not in model:
@@ -52,15 +81,24 @@ def SGDUpdate(params):
                 arr.append(np.zeros(params[k][i].shape,
                                     dtype=params[k][i].dtype))
                 model[k] = arr
-        # pdb.set_trace()
-        model[k][i] -= SGD_ALPHA*params[k][i]
+
+            # update model with rmsprop
+            # model[k][i] -= SGD_ALPHA * params[k][i] / np.sqrt(rmsprop[k][i])
+
+            # update model with adagrad
+            model[k][i] -= SGD_ALPHA * params[k][i] / np.sqrt(adagrad[k][i])
+
 
 def initParams(solver_filename, reset=True):
     redisInstance = Redis(host='localhost', port=6379, db=0)
     model = redisC.Dict(redis=redisInstance, key="centralModel")
+    rmsprop = redisC.Dict(redis=redisInstance, key="rmsprop")
+    adagrad = redisC.Dict(redis=redisInstance, key="adagrad")
 
     if reset:
         model.clear()
+        rmsprop.clear()
+        adagrad.clear()
 
         # Instantiate model parameters according to initialization
         # scheme specified in .prototxt file
@@ -85,6 +123,7 @@ def initParams(solver_filename, reset=True):
                    len(model[name]) == len(parameters),
                    "Model in Redis database does not match specified solver.")
 
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("solver")
@@ -92,6 +131,7 @@ def get_args():
 
     args = parser.parse_args()
     return args
+
 
 if __name__ == "__main__":
     args = get_args()
