@@ -13,6 +13,25 @@ SGD_ALPHA = 0.01
 app = Flask(__name__)
 
 
+def add_to_model(model, updates, weight, scale=None):
+    """ Applies an update to the model parameters.
+
+    Args:
+        model:  dict-like container of all parameters
+        updates: dict-like container of updates (must be subset of model)
+        weight:  int or float by which the update is multiplied
+        scale:   dict-like container of normalization factors by which to scale
+                 individual elements of the updates (a la Adagrad or RMSProp)
+    """
+    if scale is None:
+        for key in updates:
+            for i in range(len(updates[key])):
+                model[key][i] += weight*updates[key][i]
+    else:
+        for key in updates:
+            for i in range(len(updates[key])):
+                model[key][i] += weight*updates[key][i]/scale[key][i]
+
 @app.route("/")
 def hello():
     return "Param Server"
@@ -40,10 +59,15 @@ def rmsprop(updateParams):
 def adagrad(updateParams):
     adagrad = redisC.Dict(key="adagrad")
     if not adagrad:
-        adagrad = {k: updateParams[k]**2 for k in updateParams}
+        for k in updateParams:
+            params = []
+            for i in range(len(updateParams[k])):
+                params.append(updateParams[k][i]**2)
+            adagrad[k] = params
     else:
         for k in updateParams:
-            adagrad[k] += updateParams[k]**2
+            for i in range(len(updateParams[k])):
+                adagrad[k][i] += updateParams[k][i]**2
 
 
 @app.route('/api/v1/update_model', methods=['POST'])
@@ -69,7 +93,7 @@ def SGDUpdate(params):
     model = redisC.Dict(key="centralModel")
     # rmsprop = redisC.Dict(key="rmsprop")
     adagrad = redisC.Dict(key="adagrad")
-
+    print adagrad.keys()
     # print model
     for k in params:
         if k not in model:

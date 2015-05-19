@@ -82,10 +82,10 @@ class ExpGain(object):
     # TODO: decide *.out file directory
     def record(self, action, reward, frame):
         with open("actions.out", "a") as actions:
-            actions.append(str(action))
+            actions.write(str(action)+'\n')
 
         with open("rewards.out", "a") as rewards:
-            rewards.append(str(reward))
+            rewards.write(str(reward)+'\n')
 
         with open("frames.out", "a") as frames:
-            frames.append(str(frame))
+            frames.write(str(frame)+'\n')

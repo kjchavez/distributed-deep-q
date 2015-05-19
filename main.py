@@ -16,7 +16,7 @@ from barista.baristanet import BaristaNet
 from barista import netutils
 from replay import ReplayDataset
 from gamesim.SnakeGame import SnakeGame, gray_scale
-from ExpGain import ExpGain, generate_preprocessor
+from expgain import ExpGain, generate_preprocessor
 
 # Modules necessary only for faking Experience Gainer
 import random

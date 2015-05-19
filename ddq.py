@@ -20,13 +20,14 @@ def spawn_barista(partition):
     model = SparkFiles.get("deepq16.caffemodel")
     solver = SparkFiles.get("solver.prototxt")
     root = SparkFiles.getRootDirectory()
+    dset = os.path.join(root, "dset.hdf5")
     flag_file = "flags/__BARISTA_READY__"
     if os.path.isfile(flag_file):
         os.remove("flags/__BARISTA_READY__")
 
     out = open(os.path.join(root, "barista.log"),'w')
     subprocess.Popen(["python", main, architecture, model,
-                      "--dataset", "dset.hdf5",
+                      "--dataset", dset,
                       "--solver", solver],
                      stdout=out,
                      stderr=subprocess.STDOUT)
@@ -41,6 +42,7 @@ def train_partition(idx, iterator):
     model = SparkFiles.get("deepq16.caffemodel")
     solver = SparkFiles.get("solver.prototxt")
     root = SparkFiles.getRootDirectory()
+    dset = os.path.join(root, "dset.hdf5")
 
     flag_file = "flags/__BARISTA_READY__.%d" % port
     if os.path.isfile(flag_file):
@@ -48,7 +50,7 @@ def train_partition(idx, iterator):
 
     out = open(os.path.join(root, "barista.log"),'w')
     subprocess.Popen(["python", main, architecture, model,
-                      "--dataset", "dset.hdf5",
+                      "--dataset", dset,
                       "--solver", solver,
                       "--port", str(port)])#,
                      #stdout=out,
