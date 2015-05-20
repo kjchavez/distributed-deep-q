@@ -1,11 +1,9 @@
-import argparse
-
-from flask import Flask, Response, request
+from flask import Flask, Response, jsonify, request, render_template
 from barista import messaging
 from redis import Redis
 import redis_collections as redisC
 import numpy as np
-
+import argparse
 from caffe import SGDSolver
 
 # Global settings, only set once, when the server is started
@@ -86,6 +84,15 @@ def adagrad_update(updateParams):
 @app.route("/")
 def hello():
     return "Param Server"
+    
+@app.route("/current_status")
+def get_current_status():
+    return render_template('current_status.html')
+
+@app.route("/api/v1/status_data", methods=['GET'])
+def get_current_data():
+    d = {"a":"B", "c":"d"}
+    return jsonify(d)
 
 
 @app.route('/api/v1/latest_model', methods=['GET'])

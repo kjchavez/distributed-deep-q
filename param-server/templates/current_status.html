@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/jquery.slick/1.5.3/slick.css"/>
+	<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/jquery.slick/1.5.3/slick-theme.css"/>
+    <title>Status</title>
+</head>
+<body>
+
+    {{ a_variable }}
+
+    {# a comment #}
+    <div id = "average-reward-plot" style="height:400px; width:400px"</div>
+  	
+
+
+    <script type="text/javascript" src="{{ url_for('static', filename = 'amcharts/amcharts.js') }}"></script>
+	<script type="text/javascript" src="{{ url_for('static', filename = 'amcharts/serial.js') }}"></script>
+	<script type="text/javascript" src="{{ url_for('static', filename = 'amcharts/plugins/dataloader/dataloader.min.js')}}"></script>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+	<script type="text/javascript" src="//cdn.jsdelivr.net/jquery.slick/1.5.3/slick.min.js"></script>
+
+	<script type="text/javascript">
+		AmCharts.ready(function(){
+
+			averageReward = initAverageReward();
+			setInterval(function(){
+				getData();
+			}, 5000);
+		});
+
+		function getData(){
+			$.ajax({
+				url: "http://localhost:5500/api/v1/status_data", 
+				success: function(result){
+					processResult(result);
+	    		}, 
+	    		failure: function(result){
+	    			console.log("ajax failed");
+	    		}
+	    	});
+		}
+
+		function processResult(result){
+			
+		    console.log(result);
+		}
+		function initAverageReward(){
+			return AmCharts.makeChart("average-reward-plot",
+				{
+					"type": "serial",
+					"pathToImages": "http://cdn.amcharts.com/lib/3/images/",
+					"categoryField": "dates",
+					"startDuration": 1,
+					"fontSize": 18,
+					"creditsPosition": "bottom-right",
+					"categoryAxis": {
+						"gridPosition": "start",
+						"parseDates":true
+					},
+					"trendLines": [],
+					"graphs": [
+						{
+							"balloonText": "[[title]] of [[category]]:[[value]]",
+							"bullet": "round",
+							"gapPeriod": 1,
+							"id": "AmGraph-1",
+							"lineThickness": 4,
+							"title": "Current",
+							"type": "smoothedLine",
+							"valueField": "actualNum"
+						},
+						{
+							"balloonText": "[[title]] of [[category]]:[[value]]",
+							"bullet": "square",
+							"id": "AmGraph-2",
+							"lineThickness": 2,
+							"title": "Target",
+							"type": "smoothedLine",
+							"valueField": "targetNum"
+						}
+					],
+					"guides": [],
+					"allLabels": [],
+					"balloon": {},
+					"legend": {
+						"useGraphSettings": true
+					},
+					"titles": [
+						{
+							"id": "Title-1",
+							"size": 15,
+							"text": "Average Reward"
+						}
+					]
+				}
+			);
+
+		}
+
+
+	</script>
+
+</body>
+</html>
