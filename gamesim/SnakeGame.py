@@ -1,7 +1,6 @@
 from collections import deque
 from random import choice
 import numpy as np
-import cv2
 
 # constants
 _NX = 10
