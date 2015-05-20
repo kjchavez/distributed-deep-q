@@ -78,14 +78,3 @@ class ExpGain(object):
 
         if reward < 0:  # game over
             self.reset_game()
-
-    # TODO: decide *.out file directory
-    def record(self, action, reward, frame):
-        with open("actions.out", "a") as actions:
-            actions.write(str(action)+'\n')
-
-        with open("rewards.out", "a") as rewards:
-            rewards.write(str(reward)+'\n')
-
-        with open("frames.out", "a") as frames:
-            frames.write(str(frame)+'\n')
