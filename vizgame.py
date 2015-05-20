@@ -30,10 +30,10 @@ def record(action, reward, frame, newfile=False):
             f.create_array(frames, "frame 0", frame, title="frame0")
 
 
-def get_frame(frame_number):
+def get_frames():
     with tb.open_file("history.h5", "a") as f:
         frames = f.root.frames._f_list_nodes()
-        return frames[frame_number].read()
+        return [frames[fidx].read() for fidx in range(len(frames))]
 
 
 def gen_image(frame, frame_number):
