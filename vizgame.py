@@ -36,10 +36,6 @@ def get_frames():
         return [frames[fidx].read() for fidx in range(len(frames))]
 
 
-def gen_image(frame, frame_number):
-    misc.imsave("frame" + str(frame_number) + ".png", frame)
-
-
 class DiscreteSlider(Slider):
     """ A matplotlib slider widget with discrete steps. """
 
