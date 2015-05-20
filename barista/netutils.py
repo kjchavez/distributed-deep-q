@@ -71,9 +71,9 @@ def pretty_print(param_dict):
 
 class NetLogger:
     def __init__(self, net, path, reset=False):
-        self.path = path + str(datetime.now())
-        if not os.path.isdir(path):
-            os.makedirs(path)
+        self.path = path + "-" + str(datetime.now())
+        if not os.path.isdir(self.path):
+            os.makedirs(self.path)
 
         self.net = net
 
