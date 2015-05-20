@@ -79,7 +79,6 @@ class ExpGain(object):
         exp_action = self.actions.index(action)
         exp_frame = self.preprocessor(self.arrayify_frames())
         self.dataset.add_experience(exp_action, reward, exp_frame)
-        self.record(exp_action, reward, exp_frame)
 
         if gameover:  # game over
             self.reset_game()
@@ -106,14 +105,3 @@ class ExpGain(object):
         if gameover:
             self.game_over = True
         return reward
-
-    # TODO: decide *.out file directory
-    def record(self, action, reward, frame):
-        with open("actions.out", "a") as actions:
-            actions.write(str(action)+'\n')
-
-        with open("rewards.out", "a") as rewards:
-            rewards.write(str(reward)+'\n')
-
-        with open("frames.out", "a") as frames:
-            frames.write(str(frame)+'\n')
