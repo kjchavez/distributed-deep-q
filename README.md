@@ -43,7 +43,7 @@ Fire up the redis and parameter servers,
 We can now run the application using spark-submit. We will need to include the following python files/packages with the job submission:
 - main.py
 - replay.py
-- ExpGain.py
+- expgain.py
 - gamesim.zip
 - barista.zip
 
@@ -59,7 +59,7 @@ You can create the zipped python packages using
 
 Then submit the ddq.py script using spark-submit:
 
-    spark-submit --master local --py-files <python files, comma-separated> --files <regular files, comma-separated> ddq.py
+    ./spark-submit --master local[*] --files models/deepq/train_val.prototxt,models/deepq/solver.prototxt,models/deepq/deepq16.caffemodel --py-files barista.zip,caffe.zip,gamesim.zip,expgain.py,replay.py,main.py ddq.py 
 
 #### Common Errors
 - **socket.error: [Errno 99] Cannot assign requested address.** If there is a complaint about "localhost" in the message, check your /etc/hosts file and make sure the line "127.0.0.1 localhost" is present.
