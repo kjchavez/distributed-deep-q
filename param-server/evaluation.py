@@ -33,7 +33,6 @@ class PolicyEvaluator(object):
         scores = [0] * self.batch_size
         while trials_completed < num_trials:
             states = [eg.get_preprocessed_state() for eg in self.engines]
-            print "[EVALUATE]", states[0]
             actions = self.net.select_action(states,
                                              batch_size=self.batch_size)
             for i, (action, eg) in enumerate(zip(actions, self.engines)):
