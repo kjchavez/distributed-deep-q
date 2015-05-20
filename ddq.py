@@ -1,18 +1,19 @@
-import os, sys, time
+import os
 from pyspark import SparkContext, SparkConf
 from pyspark import SparkFiles
 
-import caffe
 import barista
 from barista.dummy_client import DummyClient
 
 import subprocess
+
 
 def sgd_step(step_num):
     dc = DummyClient("127.0.0.1", 50001)
     dc.send(barista.GRAD_UPDATE)
     response = dc.recv()
     return response
+
 
 def spawn_barista(partition):
     main = SparkFiles.get("main.py")
@@ -25,7 +26,7 @@ def spawn_barista(partition):
     if os.path.isfile(flag_file):
         os.remove("flags/__BARISTA_READY__")
 
-    out = open(os.path.join(root, "barista.log"),'w')
+    out = open(os.path.join(root, "barista.log"), 'w')
     subprocess.Popen(["python", main, architecture, model,
                       "--dataset", dset,
                       "--solver", solver],
@@ -34,6 +35,7 @@ def spawn_barista(partition):
 
     while not os.path.isfile("flags/__BARISTA_READY__"):
         pass
+
 
 def train_partition(idx, iterator):
     port = 50000 + idx % 256
@@ -48,13 +50,11 @@ def train_partition(idx, iterator):
     if os.path.isfile(flag_file):
         os.remove(flag_file)
 
-    out = open(os.path.join(root, "barista.log"),'w')
+    #  out = open(os.path.join(root, "barista.log"), 'w')
     subprocess.Popen(["python", main, architecture, model,
                       "--dataset", dset,
                       "--solver", solver,
-                      "--port", str(port)])#,
-                     #stdout=out,
-                     #stderr=subprocess.STDOUT)
+                      "--port", str(port)])
 
     while not os.path.isfile(flag_file):
         pass
@@ -68,8 +68,9 @@ def train_partition(idx, iterator):
 conf = SparkConf().setAppName("Spark Test")
 sc = SparkContext(conf=conf)
 
-N = 20
+N = 200
 steps = sc.parallelize(xrange(N))
+
 # Start up Barista processes
 # steps.foreachPartition(spawn_barista)
 # res = steps.map(sgd_step)
