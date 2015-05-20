@@ -1,7 +1,7 @@
 from collections import deque
 from random import choice
 import numpy as np
-
+import cv2
 
 # constants
 _NX = 10
@@ -20,7 +20,7 @@ _GRID = {(i, j) for i in range(_NX) for j in range(_NY)}
 _SCORE_GROW = 1
 _SCORE_MOVE = 0
 _SCORE_GAME_OVER = -_NX * _NY
-_APPLE_COLOR = np.uint8(100)
+_APPLE_COLOR = np.uint8(0)
 _BODY_COLOR = np.uint8(255)
 _HEAD_COLOR = np.uint8(200)
 
@@ -121,16 +121,16 @@ class Snake(object):
         head = list(self.deque[0])
         if direction in _NORTH:
             head[1] += 1
-            head[1] %= _NY
+            #head[1] %= _NY
         elif direction in _SOUTH:
             head[1] -= 1
-            head[1] %= _NY
+            #head[1] %= _NY
         elif direction in _EAST:
             head[0] += 1
-            head[0] %= _NX
+            #head[0] %= _NX
         elif direction in _WEST:
             head[0] -= 1
-            head[0] %= _NX
+            #head[0] %= _NX
         else:
             raise ValueError("Direction input error")
 
@@ -159,6 +159,11 @@ class SnakeGame(object):
 
     def generate_apple(self):
         self.apples.add_apple(self.empty_grid())
+
+    @staticmethod
+    def out_of_bounds(point):
+        return (point[0] < 0 or point[0] >= _NX or
+                point[1] < 0 or point[1] >= _NY)
 
     def __str__(self):
         string = []
@@ -216,7 +221,7 @@ class SnakeGame(object):
     def update_game(self, direction):
         ''' Updates game with direction and returns additional score. '''
         new_head = self.snake.new_head(direction)
-        if self.snake.contains(new_head):
+        if self.snake.contains(new_head) or SnakeGame.out_of_bounds(new_head):
             self.gameover = True
             print "Game over"
             return _SCORE_GAME_OVER
@@ -235,7 +240,10 @@ class SnakeGame(object):
     def cpu_play(self, state_array, direction):
         self.set_state(state_array)
         score_update = self.update_game(direction)
-        return self.encode_state(), score_update
+        # print(self)
+        return (self.encode_state(),
+                score_update,
+                (score_update == _SCORE_GAME_OVER))
 
     def human_play(self, state_array, direction):
         new_state, score_update = self.cpu_play(state_array, direction)
@@ -261,16 +269,25 @@ class SnakeGame(object):
 def gray_scale(state_array):
     nc, nx, ny = state_array.shape
     gray_array = np.zeros((nc, nx, ny), dtype='uint8')
+    gray_array[state_array != _EMPTY_CELL] = _BODY_COLOR
+    gray_array[state_array == _APPLE] = _APPLE_COLOR
+    gray_array[state_array == _HEAD] = _HEAD_COLOR
+    frame = gray_array[0]
+    # print state_array
+    # print "Frame Shape", frame.shape
+    # cv2.imshow('game', gray_array[0])
+    # cv2.waitKey(30)
 
-    for y in range(ny):
-        for x in range(nx):
-            for c in range(nc):
-                if state_array[c, x, y] == _APPLE:
-                    gray_array[c, x, y] = _APPLE_COLOR
-                elif state_array[c, x, y] != _EMPTY_CELL:
-                    if state_array[c, x, y] != _HEAD:
-                        gray_array[c, x, y] = _BODY_COLOR
-                    else:
-                        gray_array[c, x, y] = _HEAD_COLOR
+
+    # for y in range(ny):
+    #     for x in range(nx):
+    #         for c in range(nc):
+    #             if state_array[c, x, y] == _APPLE:
+    #                 gray_array[c, x, y] = _APPLE_COLOR
+    #             elif state_array[c, x, y] != _EMPTY_CELL:
+    #                 if state_array[c, x, y] != _HEAD:
+    #                     gray_array[c, x, y] = _BODY_COLOR
+    #                 else:
+    #                     gray_array[c, x, y] = _HEAD_COLOR
 
     return gray_array

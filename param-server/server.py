@@ -28,13 +28,14 @@ def apply_descent(model_name, updates, weight=1, scale=None, fn=lambda x: x):
         fn:     function to apply to scale
     """
     model = redisC.Dict(key="centralModel")
+    prev_model = dict(model)
     if scale is None:
         for key in updates:
-            model[key] = [model[key][i] - weight*updates[key][i]
+            model[key] = [prev_model[key][i] - weight*updates[key][i]
                           for i in range(len(updates[key]))]
     else:
         for key in updates:
-            model[key] = [model[key][i] - weight*updates[key][i]/fn(scale[key][i])
+            model[key] = [prev_model[key][i] - weight*updates[key][i]/fn(scale[key][i])
                           for i in range(len(updates[key]))]
 
 

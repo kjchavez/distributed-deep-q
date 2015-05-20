@@ -36,11 +36,13 @@ class ExpGain(object):
         self.dataset = dataset              # replay_dataset object
         self.sequence = deque()             # sequence of frames
         self.init_state = init_state        # initial state
+        self.game_over = False
         for _ in range(_NFRAME):
             self.sequence.append(init_state)
 
     def reset_game(self):
         self.sequence = deque()
+        self.game_over = False
         for _ in range(_NFRAME):
             self.sequence.append(self.init_state)
 
@@ -55,19 +57,22 @@ class ExpGain(object):
             return _EPSILON_MIN
         else:
             return _EPSILON_MIN + (_EPSILON_MAX - _EPSILON_MIN) \
-                   * (_FRAME_LIMIT - iter_num) / _FRAME_LIMIT
+                   * max(_FRAME_LIMIT - iter_num, 0) / _FRAME_LIMIT
 
     def arrayify_frames(self):
         nx, ny = self.sequence[0].shape
-        array = np.zeros((_NFRAME, ny, nx), dtype='uint8')
+        array = np.zeros((_NFRAME, ny, nx))
         for frame in range(_NFRAME):
             array[frame] = self.sequence[frame]
         return array
 
+    def get_preprocessed_state(self):
+        return self.preprocessor(self.arrayify_frames())
+
     def generate_experience(self, iter_num):
         pstate = self.preprocessor(self.arrayify_frames())
         action = self.select_action(pstate, self.get_epsilon(iter_num))
-        new_state, reward = self.game(self.sequence[-1], action)
+        new_state, reward, gameover = self.game(self.sequence[-1], action)
         self.sequence.popleft()
         self.sequence.append(new_state)
 
@@ -76,8 +81,31 @@ class ExpGain(object):
         self.dataset.add_experience(exp_action, reward, exp_frame)
         self.record(exp_action, reward, exp_frame)
 
-        if reward < 0:  # game over
+        if gameover:  # game over
             self.reset_game()
+
+    def play_policy(self):
+        """ Use the net to select an action and play a frame of game.
+
+        Returns:
+            Reward received after this step
+        """
+        pstate = self.preprocessor(self.arrayify_frames())
+        action = self.actions[self.net.select_action(pstate)]
+        new_state, reward, gameover = self.game(self.sequence[-1], action)
+        self.sequence.popleft()
+        self.sequence.append(new_state)
+        if gameover:
+            self.game_over = True
+        return reward
+
+    def play_action(self, action):
+        new_state, reward, gameover = self.game(self.sequence[-1], action)
+        self.sequence.popleft()
+        self.sequence.append(new_state)
+        if gameover:
+            self.game_over = True
+        return reward
 
     # TODO: decide *.out file directory
     def record(self, action, reward, frame):

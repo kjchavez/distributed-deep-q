@@ -41,8 +41,12 @@ class BaristaNet:
         self.net.set_input_arrays(self.next_state, self.reward, barista.NEXT_STATE_MD_LAYER)
         self.net.set_input_arrays(self.action, self.reward, barista.ACTION_REWARD_MD_LAYER)
 
+        # Expose some Caffe net properties for easy use
+        self.params = self.net.params
+        self.blobs = self.net.blobs
+
         # Make sure IN-MEMORY data layers are properly configured
-        assert_in_memory_config(self)
+        # assert_in_memory_config(self)
 
     def add_dataset(self, dset):
         self.dataset = dset
@@ -128,10 +132,10 @@ class BaristaNet:
         self.net.forward()
         self.net.backward()
 
-    def select_action(self, state):
-        self.state[0] = state
+    def select_action(self, state, batch_size=1):
+        self.state[0:batch_size] = state
         self.net.forward(end='Q_out')
-        action = np.argmax(self.net.blobs['Q_out'].data[0], axis=0).squeeze()
+        action = np.argmax(self.net.blobs['Q_out'].data, axis=1)[0:batch_size].squeeze()
         return action
 
     def log(self):

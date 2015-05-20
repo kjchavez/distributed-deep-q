@@ -52,6 +52,18 @@ def extract_net_data(caffe_net, blobs):
 
     return data
 
+
+def set_net_data(caffe_net, blobs):
+    for name in blobs:
+        caffe_net.blobs[name].data[:] = blobs[name]
+
+
+def set_net_params(caffe_net, params):
+    for name in params:
+        for i in range(len(params[name])):
+            caffe_net.params[name][i].data[:] = params[name][i]
+
+
 def pretty_print(param_dict):
     for param in sorted(param_dict.keys()):
         print param.ljust(19), param_dict[param]
