@@ -1,6 +1,5 @@
 import tables as tb
 import matplotlib.pyplot as plt
-from scipy import misc
 import matplotlib.cm as cm
 from matplotlib.widgets import Slider
 
@@ -82,7 +81,6 @@ def view_images(frames):
     def update(val):
         l.set_data(frames[int(sframe.val)])
         plt.draw()
-        plt.show()
 
     sframe.on_changed(update)
     plt.show()
