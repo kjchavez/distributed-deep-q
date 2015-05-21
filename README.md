@@ -78,9 +78,7 @@ Then submit the ddq.py script using spark-submit:
 - [BARISTA] Remove Barista's dependence on a .caffemodel argument in the initializer. It should be able to start directly from a solver.prototxt.
 - [DDQ] Test a *single-process* version of the ddq application by spawning a Barista object inside the **train_partition** function, rather than using Popen.
 - [PARAM-SERVER] Add functionality to periodically save a snapshot of the model.
-- [PARAM-SERVER] Implement RMSProp or AdaGrad updates.
 - [PARAM-SERVER] Decide when to send a new "target" model (known as P in the .prototxt)
-- [EXP-GAIN] Add visualization of game frames and action selection.
 - [UTILS] Implement script to evaluate the policy implied by a saved model. (i.e. Use model to play game many times and compute average score)
 
 ### Lower Priority
