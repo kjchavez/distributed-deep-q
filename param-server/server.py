@@ -5,6 +5,7 @@ import redis_collections as redisC
 import numpy as np
 import argparse
 from caffe import SGDSolver
+from werkzeug.contrib.profiler import ProfilerMiddleware
 
 # Constants
 MODEL_NAME = "centralModel"
@@ -18,7 +19,6 @@ rmsprop_decay = 0.9
 update_fn = None
 
 app = Flask(__name__)
-
 
 def get_snapshot_name(iteration):
     return MODEL_NAME + "-%06d" % iteration
@@ -41,7 +41,7 @@ def apply_descent(model_name, updates, weight=1, scale=None, fn=lambda x: x):
     """
     iteration = int(redisInstance.get("iteration"))
 
-    model = redisC.Dict(key=model_name)
+    model = redisC.Dict(key=model_name, redis=redisInstance)
     prev_model = dict(model)
 
     if scale is None:
@@ -68,21 +68,23 @@ def sgd_update(updateParams):
 
 def rmsprop_update(updateParams):
     print "[RMSPROP UPDATE]"
-    rmsprop = redisC.Dict(key="rmsprop")
+    rmsprop = redisC.Dict(key="rmsprop", redis=redisInstance)
+    d_rmsprop = dict(rmsprop)
     if not rmsprop:
         for k in updateParams:
             params = []
             for i in range(len(updateParams[k])):
                 params.append(updateParams[k][i]**2)
             rmsprop[k] = params
+            d_rmsprop = dict(rmsprop)
     else:
         for k in updateParams:
-            rmsprop[k] = [rmsprop_decay * rmsprop[k][i] +
+            rmsprop[k] = [rmsprop_decay * d_rmsprop[k][i] +
                           (1-rmsprop_decay) * updateParams[k][i]**2
                           for i in range(len(updateParams[k]))]
 
     apply_descent("centralModel", updateParams,
-                  weight=learning_rate, scale=rmsprop,
+                  weight=learning_rate, scale=d_rmsprop,
                   fn=lambda x: np.sqrt(x+1e-8))
 
 
@@ -228,6 +230,7 @@ def get_args():
                         help="Number of iterations between snapshots")
     parser.add_argument("--special-update", type=int, default=10,
                         help="Number of iterations between special updates")
+    parser.add_argument("--profile", action="store_true")
 
     args = parser.parse_args()
     return args
@@ -249,4 +252,9 @@ if __name__ == "__main__":
         update_fn = adagrad_update
 
     initParams(args.solver, reset=args.reset)
+
+    if args.profile:
+        app.config['PROFILE'] = True
+        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
+
     app.run(debug=True, port=5500)
