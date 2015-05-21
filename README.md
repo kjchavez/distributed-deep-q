@@ -59,7 +59,9 @@ You can create the zipped python packages using
 
 Then submit the ddq.py script using spark-submit:
 
-    ./spark-submit --master local[*] --files models/deepq/train_val.prototxt,models/deepq/solver.prototxt,models/deepq/deepq16.caffemodel --py-files barista.zip,caffe.zip,gamesim.zip,expgain.py,replay.py,main.py ddq.py 
+    ./spark-submit --master local[*] --files models/deepq/train_val.prototxt,models/deepq/solver.prototxt,models/deepq/deepq16.caffemodel --py-files barista.zip,gamesim.zip,expgain.py,replay.py,main.py ddq.py 
+    
+We could also add caffe.zip for --py-files in aws.  But in a local setting it's not needed.
 
 #### Common Errors
 - **socket.error: [Errno 99] Cannot assign requested address.** If there is a complaint about "localhost" in the message, check your /etc/hosts file and make sure the line "127.0.0.1 localhost" is present.
