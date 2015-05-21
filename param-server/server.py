@@ -11,8 +11,9 @@ MODEL_NAME = "centralModel"
 
 # Global settings, only set once, when the server is started
 redisInstance = None
-snapshot_frequency = 2
-step_size = 0.0
+snapshot_frequency = None
+special_update_period = 2
+learning_rate = 0.0
 rmsprop_decay = 0.9
 update_fn = None
 
@@ -21,6 +22,10 @@ app = Flask(__name__)
 
 def get_snapshot_name(iteration):
     return MODEL_NAME + "-%06d" % iteration
+
+
+def is_tracked_param(name):
+    return name[0] == 'Q'
 
 
 def apply_descent(model_name, updates, weight=1, scale=None, fn=lambda x: x):
@@ -34,11 +39,10 @@ def apply_descent(model_name, updates, weight=1, scale=None, fn=lambda x: x):
                  individual elements of the updates (a la Adagrad or RMSProp)
         fn:     function to apply to scale
     """
-    redisInstance.incr("iteration")
     iteration = int(redisInstance.get("iteration"))
 
-    prev_model = dict(redisC.Dict(key=model_name))
     model = redisC.Dict(key=model_name)
+    prev_model = dict(model)
 
     if scale is None:
         for key in updates:
@@ -59,7 +63,7 @@ def apply_descent(model_name, updates, weight=1, scale=None, fn=lambda x: x):
 
 def sgd_update(updateParams):
     print "[SGD UPDATE]"
-    apply_descent(MODEL_NAME, updateParams, weight=step_size)
+    apply_descent(MODEL_NAME, updateParams, weight=learning_rate)
 
 
 def rmsprop_update(updateParams):
@@ -78,7 +82,7 @@ def rmsprop_update(updateParams):
                           for i in range(len(updateParams[k]))]
 
     apply_descent("centralModel", updateParams,
-                  weight=step_size, scale=rmsprop,
+                  weight=learning_rate, scale=rmsprop,
                   fn=lambda x: np.sqrt(x+1e-8))
 
 
@@ -97,8 +101,21 @@ def adagrad_update(updateParams):
                           for i in range(len(updateParams[k]))]
 
     apply_descent(MODEL_NAME, updateParams,
-                  weight=step_size, scale=adagrad,
+                  weight=learning_rate, scale=adagrad,
                   fn=lambda x: np.sqrt(x+1e-8))
+
+
+def special_update_transform_model(model):
+    """ For Distributed Deep Q, this involves copying the Q network to P.
+    """
+    updates = []
+    for key in model:
+        if key[0] == 'Q':
+            pkey = 'P'+key[1:]
+            updates.append((pkey, model[key]))
+
+    model.update(updates)
+    return model
 
 
 @app.route("/")
@@ -119,10 +136,16 @@ def get_current_data():
 
 @app.route('/api/v1/latest_model', methods=['GET'])
 def get_model_params():
-    # assuming the return message would be a string(of bytes)
-    model = redisC.Dict(key=MODEL_NAME)
-    print "Qconv1 norm", np.linalg.norm(model['Qconv1'][0])
-    m = messaging.create_message(dict(model), compress=False)
+    iteration = int(redisInstance.get("iteration"))
+    model = dict(redisC.Dict(key=MODEL_NAME))
+    # print "Qconv1 norm", np.linalg.norm(model['Qconv1'][0])
+    # TODO: Eliminate data duplication for improved efficiency
+
+    if iteration % special_update_period == 0:
+        special_update_transform_model(model)
+
+    print "Parameters sent:", ", ".join(model.keys())
+    m = messaging.create_message(model, compress=False)
     # pdb.set_trace()
     return Response(m, status=200)
 
@@ -130,9 +153,12 @@ def get_model_params():
 @app.route('/api/v1/update_model', methods=['POST'])
 def update_params():
     updateParams = messaging.load_gradient_message(request.data)
-    print "Grad. Qconv1 norm", np.linalg.norm(updateParams['Qconv1'][0])
+    # print "Grad. Qconv1 norm", np.linalg.norm(updateParams['Qconv1'][0])
+    redisInstance.incr("iteration")
+    iteration = int(redisInstance.get("iteration"))
+    print "Iteration", iteration
     update_fn(updateParams)
-    print "Iteration:", redisInstance.get("iteration")
+
     return Response("Updated", status=200)
 
 
@@ -156,6 +182,7 @@ def initParams(solver_filename, reset=True):
             snapshot = redisC.Dict(redis=redisInstance, key=name)
             snapshot.clear()
 
+        model.clear()
         rmsprop.clear()
         adagrad.clear()
         redisInstance.set("iteration", 0)
@@ -164,11 +191,12 @@ def initParams(solver_filename, reset=True):
         # scheme specified in .prototxt file
         solver = SGDSolver(solver_filename,)
         for name in solver.net.params:
-            parameters = solver.net.params[name]
-            init = []
-            for i in range(len(parameters)):
-                init.append(np.array(parameters[i].data, dtype='float32'))
-            model[name] = init
+            if is_tracked_param(name):
+                parameters = solver.net.params[name]
+                init = []
+                for i in range(len(parameters)):
+                    init.append(np.array(parameters[i].data, dtype='float32'))
+                model[name] = init
 
         print
         print "[Redis Collection]: Initialized the following parameters:"
@@ -186,12 +214,20 @@ def initParams(solver_filename, reset=True):
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("solver")
-    parser.add_argument("--reset", action="store_true")
+    parser.add_argument("solver", help="Prototxt file defining solver")
+    parser.add_argument("--reset", action="store_true",
+                        help="Start training brand new model")
     parser.add_argument("--update", choices=['adagrad', 'rmsprop', 'sgd'],
-                        default='rmsprop')
-    parser.add_argument("--stepsize", type=float, default=1e-3)
-    parser.add_argument("--rmsprop_decay", type=float, default=0.9)
+                        default='rmsprop',
+                        help="Choose type of gradient update")
+    parser.add_argument("--lr", type=float, default=1e-4,
+                        help="Base learning rate for updates")
+    parser.add_argument("--rmsprop_decay", type=float, default=0.9,
+                        help="Decay rate for moving average in RMSProp")
+    parser.add_argument("--snapshot-freq", '-s', type=int, default=500,
+                        help="Number of iterations between snapshots")
+    parser.add_argument("--special-update", type=int, default=10,
+                        help="Number of iterations between special updates")
 
     args = parser.parse_args()
     return args
@@ -201,7 +237,9 @@ if __name__ == "__main__":
     args = get_args()
 
     # Initialize global settings
-    step_size = args.stepsize
+    learning_rate = args.lr
+    snapshot_frequency = args.snapshot_freq
+    special_update_period = args.special_update
     if args.update == "sgd":
         update_fn = sgd_update
     elif args.update == "rmsprop":
