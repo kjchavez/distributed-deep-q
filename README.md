@@ -18,7 +18,7 @@ Start a Redis server instance.
 
 Fire up the parameter server.
 
-    python param-server/server.py models/deepq/solver.protoxt --reset
+    python param-server/server.py models/deepq/solver.prototxt --reset
 
 In a separate terminal, start the Barista application with
 
