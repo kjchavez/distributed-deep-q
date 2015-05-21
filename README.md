@@ -85,6 +85,7 @@ We could also add caffe.zip for --py-files in aws.  But in a local setting it's 
 - [MONITORING] Visualize weights for first layer filters.
 - [AWS] Figure out how to run our pipeline on AWS.
 - [PARAM-SERVER] Reject gradient updates if too stale.
+- [PARAM-SERVER] Profile, profile, profile.
 
 ### Lower Priority
 - [SPARK] Implement wrapper class(es) for easy use from within Spark.
