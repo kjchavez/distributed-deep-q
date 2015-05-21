@@ -7,11 +7,25 @@ import argparse
 from caffe import SGDSolver
 
 # Global settings, only set once, when the server is started
+redisInstance = None
+snapshot_frequency = 2
 step_size = 0.0
 rmsprop_decay = 0.9
 update_fn = None
 
 app = Flask(__name__)
+
+def curr_snapshot(curr_iter):
+    return (curr_iter / snapshot_frequency) * snapshot_frequency
+
+def prev_snapshot(curr_iter):
+    return (curr_iter - 1) / snapshot_frequency * snapshot_frequency
+
+
+def get_model_name(iteration=None):
+    if iteration is None:
+        iteration = int(redisInstance.get("iteration"))
+    return "centralModel-%06d" % curr_snapshot(iteration)
 
 
 def apply_descent(model_name, updates, weight=1, scale=None, fn=lambda x: x):
@@ -25,8 +39,17 @@ def apply_descent(model_name, updates, weight=1, scale=None, fn=lambda x: x):
                  individual elements of the updates (a la Adagrad or RMSProp)
         fn:     function to apply to scale
     """
-    model = redisC.Dict(key="centralModel")
-    prev_model = dict(model)
+    redisInstance.incr("iteration")
+    iteration = int(redisInstance.get("iteration"))
+    new_model_name = model_name + "-%06d" % curr_snapshot(iteration)
+    prev_model_name = model_name + "-%06d" % prev_snapshot(iteration)
+
+    prev_model = dict(redisC.Dict(key=prev_model_name))
+    model = redisC.Dict(key=new_model_name)
+
+    if new_model_name != prev_model_name:
+        print "Saving new model snapshot:", prev_model_name
+
     if scale is None:
         for key in updates:
             model[key] = [prev_model[key][i] - weight*updates[key][i]
@@ -98,7 +121,7 @@ def get_current_data():
 @app.route('/api/v1/latest_model', methods=['GET'])
 def get_model_params():
     # assuming the return message would be a string(of bytes)
-    model = redisC.Dict(key="centralModel")
+    model = redisC.Dict(key=get_model_name())
     print "Qconv1 norm", np.linalg.norm(model['Qconv1'][0])
     m = messaging.create_message(dict(model), compress=False)
     # pdb.set_trace()
@@ -110,6 +133,7 @@ def update_params():
     updateParams = messaging.load_gradient_message(request.data)
     print "Grad. Qconv1 norm", np.linalg.norm(updateParams['Qconv1'][0])
     update_fn(updateParams)
+    print "Iteration:", redisInstance.get("iteration")
     return Response("Updated", status=200)
 
 
@@ -121,15 +145,21 @@ def clear_params():
 
 
 def initParams(solver_filename, reset=True):
+    global redisInstance
     redisInstance = Redis(host='localhost', port=6379, db=0)
-    model = redisC.Dict(redis=redisInstance, key="centralModel")
+    model = redisC.Dict(redis=redisInstance, key="centralModel-%06d" % 0)
     rmsprop = redisC.Dict(redis=redisInstance, key="rmsprop")
     adagrad = redisC.Dict(redis=redisInstance, key="adagrad")
 
     if reset:
-        model.clear()
+        for name in redisInstance.keys("centralModel*"):
+            model = redisC.Dict(redis=redisInstance, key=name)
+            model.clear()
+
+        model = redisC.Dict(redis=redisInstance, key="centralModel-%06d" % 0)
         rmsprop.clear()
         adagrad.clear()
+        redisInstance.set("iteration", 0)
 
         # Instantiate model parameters according to initialization
         # scheme specified in .prototxt file
@@ -151,7 +181,7 @@ def initParams(solver_filename, reset=True):
         for name in solver.net.params:
             parameters = solver.net.params[name]
             assert(name in model.keys() and
-                   len(model[name]) == len(parameters),
+                   len(model[name]) == len(parameters) and
                    "Model in Redis database does not match specified solver.")
 
 
