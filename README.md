@@ -80,6 +80,7 @@ We could also add caffe.zip for --py-files in aws.  But in a local setting it's 
 - **[PARAM-SERVER] Optimize. Spending 240 milliseconds pickling data per gradient update. In that much time, we might as well compute a gradient on a single machine!**
 - [AWS] Figure out how to run our pipeline on AWS.
 - [PARAM-SERVER] Reject gradient updates if too stale.
+- [CORRECTNESS] Deal with END-OF-GAME loss function. It's slightly different. See paper.
 - ~~[PARAM-SERVER] Add functionality to periodically save a snapshot of the model.~~
 - ~~[PARAM-SERVER] Decide when to send a new "target" model (known as P in the .prototxt)~~
 - ~~[UTILS] Implement script to evaluate the policy implied by a saved model. (i.e. Use model to play game many times and compute average score)~~
