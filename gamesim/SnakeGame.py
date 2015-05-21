@@ -223,7 +223,7 @@ class SnakeGame(object):
         new_head = self.snake.new_head(direction)
         if self.snake.contains(new_head) or SnakeGame.out_of_bounds(new_head):
             self.gameover = True
-            print "Game over"
+            # print "Game over"
             return _SCORE_GAME_OVER
         elif self.apples.contains(new_head):
             self.apples.eat(new_head)
