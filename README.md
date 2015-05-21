@@ -37,7 +37,7 @@ In any case, be sure that each worker's PYTHONPATH includes the *caffe/python* d
 Fire up the redis and parameter servers,
 
     redis-server
-    python param-server/server.py models/deepq/solver.protoxt --reset
+    python param-server/server.py models/deepq/solver.prototxt --reset
 
 #### Submitting the job
 We can now run the application using spark-submit. We will need to include the following python files/packages with the job submission:
