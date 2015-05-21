@@ -6,6 +6,9 @@ import numpy as np
 import argparse
 from caffe import SGDSolver
 
+# Constants
+MODEL_NAME = "centralModel"
+
 # Global settings, only set once, when the server is started
 redisInstance = None
 snapshot_frequency = 2
@@ -15,17 +18,9 @@ update_fn = None
 
 app = Flask(__name__)
 
-def curr_snapshot(curr_iter):
-    return (curr_iter / snapshot_frequency) * snapshot_frequency
 
-def prev_snapshot(curr_iter):
-    return (curr_iter - 1) / snapshot_frequency * snapshot_frequency
-
-
-def get_model_name(iteration=None):
-    if iteration is None:
-        iteration = int(redisInstance.get("iteration"))
-    return "centralModel-%06d" % curr_snapshot(iteration)
+def get_snapshot_name(iteration):
+    return MODEL_NAME + "-%06d" % iteration
 
 
 def apply_descent(model_name, updates, weight=1, scale=None, fn=lambda x: x):
@@ -41,14 +36,9 @@ def apply_descent(model_name, updates, weight=1, scale=None, fn=lambda x: x):
     """
     redisInstance.incr("iteration")
     iteration = int(redisInstance.get("iteration"))
-    new_model_name = model_name + "-%06d" % curr_snapshot(iteration)
-    prev_model_name = model_name + "-%06d" % prev_snapshot(iteration)
 
-    prev_model = dict(redisC.Dict(key=prev_model_name))
-    model = redisC.Dict(key=new_model_name)
-
-    if new_model_name != prev_model_name:
-        print "Saving new model snapshot:", prev_model_name
+    prev_model = dict(redisC.Dict(key=model_name))
+    model = redisC.Dict(key=model_name)
 
     if scale is None:
         for key in updates:
@@ -59,10 +49,17 @@ def apply_descent(model_name, updates, weight=1, scale=None, fn=lambda x: x):
             model[key] = [prev_model[key][i] - weight*updates[key][i]/fn(scale[key][i])
                           for i in range(len(updates[key]))]
 
+    if iteration % snapshot_frequency == 0:
+        snapshot_name = get_snapshot_name(iteration)
+        snapshot = redisC.Dict(key=snapshot_name)
+        for key in model:
+            snapshot[key] = model[key]
+        print "[SNAPSHOT] Model snapshot saved:", snapshot_name
+
 
 def sgd_update(updateParams):
     print "[SGD UPDATE]"
-    apply_descent("centralModel", updateParams, weight=step_size)
+    apply_descent(MODEL_NAME, updateParams, weight=step_size)
 
 
 def rmsprop_update(updateParams):
@@ -99,7 +96,7 @@ def adagrad_update(updateParams):
             adagrad[k] = [adagrad[k][i] + updateParams[k][i]**2
                           for i in range(len(updateParams[k]))]
 
-    apply_descent("centralModel", updateParams,
+    apply_descent(MODEL_NAME, updateParams,
                   weight=step_size, scale=adagrad,
                   fn=lambda x: np.sqrt(x+1e-8))
 
@@ -107,10 +104,12 @@ def adagrad_update(updateParams):
 @app.route("/")
 def hello():
     return "Param Server"
-    
+
+
 @app.route("/current_status")
 def get_current_status():
     return render_template('current_status.html')
+
 
 @app.route("/api/v1/status_data", methods=['GET'])
 def get_current_data():
@@ -121,7 +120,7 @@ def get_current_data():
 @app.route('/api/v1/latest_model', methods=['GET'])
 def get_model_params():
     # assuming the return message would be a string(of bytes)
-    model = redisC.Dict(key=get_model_name())
+    model = redisC.Dict(key=MODEL_NAME)
     print "Qconv1 norm", np.linalg.norm(model['Qconv1'][0])
     m = messaging.create_message(dict(model), compress=False)
     # pdb.set_trace()
@@ -139,7 +138,7 @@ def update_params():
 
 @app.route('/api/v1/clear_model', methods=['GET'])
 def clear_params():
-    model = redisC.Dict(key="centralModel")
+    model = redisC.Dict(key=MODEL_NAME)
     model.clear()
     return Response("Cleared", status=200)
 
@@ -147,16 +146,16 @@ def clear_params():
 def initParams(solver_filename, reset=True):
     global redisInstance
     redisInstance = Redis(host='localhost', port=6379, db=0)
-    model = redisC.Dict(redis=redisInstance, key="centralModel-%06d" % 0)
+    model = redisC.Dict(redis=redisInstance, key=MODEL_NAME)
     rmsprop = redisC.Dict(redis=redisInstance, key="rmsprop")
     adagrad = redisC.Dict(redis=redisInstance, key="adagrad")
 
     if reset:
-        for name in redisInstance.keys("centralModel*"):
-            model = redisC.Dict(redis=redisInstance, key=name)
-            model.clear()
+        # Remove all previously saved snapshots from redis
+        for name in redisInstance.keys(MODEL_NAME+"-*"):
+            snapshot = redisC.Dict(redis=redisInstance, key=name)
+            snapshot.clear()
 
-        model = redisC.Dict(redis=redisInstance, key="centralModel-%06d" % 0)
         rmsprop.clear()
         adagrad.clear()
         redisInstance.set("iteration", 0)
