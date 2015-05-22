@@ -152,6 +152,8 @@ def initParams(solver_filename, reset=True):
     adagrad = redisC.Dict(redis=redisInstance, key="adagrad")
 
     if reset:
+        # TODO: clear average reward
+
         for name in redisInstance.keys("centralModel*"):
             model = redisC.Dict(redis=redisInstance, key=name)
             model.clear()
