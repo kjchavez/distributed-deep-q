@@ -77,15 +77,23 @@ We could also add caffe.zip for --py-files in aws.  But in a local setting it's 
 
 ## TODOs
 ### High Priority
-- [BARISTA] Remove Barista's dependence on a .caffemodel argument in the initializer. It should be able to start directly from a solver.prototxt.
-- [DDQ] Test a *single-process* version of the ddq application by spawning a Barista object inside the **train_partition** function, rather than using Popen.
-- [PARAM-SERVER] Add functionality to periodically save a snapshot of the model.
-- [PARAM-SERVER] Decide when to send a new "target" model (known as P in the .prototxt)
-- [UTILS] Implement script to evaluate the policy implied by a saved model. (i.e. Use model to play game many times and compute average score)
+- **[PARAM-SERVER] Optimize. Spending 240 milliseconds pickling data per gradient update. In that much time, we might as well compute a gradient on a single machine!**
+- [AWS] Figure out how to run our pipeline on AWS.
+- [PARAM-SERVER] Reject gradient updates if too stale.
+- [CORRECTNESS] Deal with END-OF-GAME loss function. It's slightly different. See paper.
+- ~~[PARAM-SERVER] Add functionality to periodically save a snapshot of the model.~~
+- ~~[PARAM-SERVER] Decide when to send a new "target" model (known as P in the .prototxt)~~
+- ~~[UTILS] Implement script to evaluate the policy implied by a saved model. (i.e. Use model to play game many times and compute average score)~~
+- [EVALUATION] Update evaluation.py to also compute ratio of gradients to parameters.
+- [MONITORING] Add appropriate training metrics to the monitoring dashboard
+- [PARAM-SERVER] Profile, profile, profile.
 
 ### Lower Priority
 - [SPARK] Implement wrapper class(es) for easy use from within Spark.
-- [AWS] Figure out how to run our pipeline on AWS. 
+- [BARISTA] Switch to shared memory implementation.
+- [BARISTA] Remove Barista's dependence on a .caffemodel argument in the initializer. It should be able to start directly from a solver.prototxt.
+- [MONITORING] Visualize weights for first layer filters.
+- [DDQ] Test a *single-process* version of the ddq application by spawning a Barista object inside the **train_partition** function, rather than using Popen. (Tried this, it broke)
 
 ## Open Questions
 - AWS? [https://github.com/BVLC/caffe/wiki/Caffe-on-EC2-Ubuntu-14.04-Cuda-7](https://github.com/BVLC/caffe/wiki/Caffe-on-EC2-Ubuntu-14.04-Cuda-7)

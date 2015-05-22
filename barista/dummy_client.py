@@ -1,4 +1,4 @@
-# Test barista server
+import sys
 import socket
 import barista
 
@@ -30,7 +30,12 @@ class DummyClient:
         self.sock.close()
 
 if __name__ == "__main__":
-    client = DummyClient('127.0.0.1', 50001)
-    client.send(barista.GRAD_UPDATE)
-    response = client.recv()
-    print response
+    N = 1
+    if len(sys.argv) == 2:
+        N = int(sys.argv[1])
+
+    for i in xrange(N):
+        client = DummyClient('127.0.0.1', 50001)
+        client.send(barista.GRAD_UPDATE)
+        response = client.recv()
+        print "Response[%d]:" % i, response
