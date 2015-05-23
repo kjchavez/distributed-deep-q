@@ -124,7 +124,7 @@ def special_update_transform_model(model):
 #                 STATS for "babysitting" the learning process.
 # ============================================================================
 # ** See http://cs231n.github.io/neural-networks-3/#baby for more information.
-
+# ** Should these statistics be saved to Redis or to file?
 
 # TODO: Compute ratio of parameter weights to *updates* (not gradients,
 # but the actual updates)
