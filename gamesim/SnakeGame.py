@@ -20,8 +20,8 @@ _GRID = {(i, j) for i in range(_NX) for j in range(_NY)}
 _SCORE_GROW = 1
 _SCORE_MOVE = 0
 _SCORE_GAME_OVER = -_NX * _NY
-_APPLE_COLOR = np.uint8(0)
-_BODY_COLOR = np.uint8(255)
+_APPLE_COLOR = np.uint8(255)
+_BODY_COLOR = np.uint8(200)
 _HEAD_COLOR = np.uint8(200)
 
 

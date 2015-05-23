@@ -32,13 +32,14 @@ class BaristaNet:
         self.action = np.zeros(self.net.blobs['action'].data.shape, dtype=np.float32)
         self.reward = np.zeros(self.net.blobs['reward'].data.shape, dtype=np.float32)
         self.next_state = np.zeros(self.net.blobs['next_state'].data.shape, dtype=np.float32)
+        self.non_terminal = np.zeros(self.net.blobs['non_terminal'].data.shape, dtype=np.float32)
         self.batch_size = self.state.shape[0]
 
         # Set these as inputs to appropriate IN-MEMORY layers of Caffe
         # TODO: state and next_state layers shouldn't have a "labels" source,
         # but the set_input_arrays function requires two sections of memory
         self.net.set_input_arrays(self.state, self.reward, barista.STATE_MD_LAYER)
-        self.net.set_input_arrays(self.next_state, self.reward, barista.NEXT_STATE_MD_LAYER)
+        self.net.set_input_arrays(self.next_state, self.non_terminal, barista.NEXT_STATE_MD_LAYER)
         self.net.set_input_arrays(self.action, self.reward, barista.ACTION_REWARD_MD_LAYER)
 
         # Expose some Caffe net properties for easy use
@@ -60,6 +61,7 @@ class BaristaNet:
                                        self.action,
                                        self.reward,
                                        self.next_state,
+                                       self.non_terminal,
                                        self.batch_size)
         else:
             print "Warning: no dataset specified, using dummy data."
@@ -78,6 +80,7 @@ class BaristaNet:
 
         self.reward[...] = np.random.randint(-5, 6, size=self.reward.shape)
         self.next_state[...] = np.random.randint(0, 256, size=self.next_state.shape)
+        self.non_terminal[...] = np.random.choice([True, False], size=self.non_terminal.shape)
 
     def fetch_model(self):
         """ Get model parameters from driver over the network. """

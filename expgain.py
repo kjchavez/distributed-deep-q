@@ -77,7 +77,11 @@ class ExpGain(object):
         self.sequence.append(new_state)
 
         exp_action = self.actions.index(action)
-        exp_frame = self.preprocessor(self.arrayify_frames())
+        if gameover:
+            exp_frame = None
+        else:
+            exp_frame = self.preprocessor(self.arrayify_frames())
+
         self.dataset.add_experience(exp_action, reward, exp_frame)
 
         if gameover:  # game over

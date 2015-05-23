@@ -17,6 +17,16 @@ import h5py
 import numpy as np
 
 
+def view_dset(rdset, frame_rate=25):
+    import cv2
+    for i in xrange(rdset.dset_size):
+        cv2.imshow("Game", rdset.state[i][-1])
+        print rdset.non_terminal[i]
+        if not rdset.non_terminal[i]:
+            print "ENDGAME at idx", i
+        cv2.waitKey(1000/frame_rate)
+
+
 class ReplayDataset(object):
     """ A wrapper around a replay dataset residing on disk as HDF5. """
     def __init__(self, filename, state_shape, dset_size=1000, overwrite=False):
@@ -25,7 +35,7 @@ class ReplayDataset(object):
         else:
             self.fp = h5py.File(filename, 'a')
 
-        if all(x in self.fp for x in ("state", "action", "reward")):
+        if all(x in self.fp for x in ("state", "action", "reward", "non_terminal")):
             self.state = self.fp['state']
             self.dset_size = self.state.shape[0]
 
@@ -34,6 +44,9 @@ class ReplayDataset(object):
 
             self.reward = np.empty(self.dset_size, dtype=np.int16)
             self.fp['reward'].read_direct(self.reward)
+
+            self.non_terminal = np.empty(self.dset_size, dtype=bool)
+            self.fp['non_terminal'].read_direct(self.non_terminal)
 
             if self.dset_size != dset_size:
                 print ("Warning: dataset loaded from %s is of size %d, "
@@ -46,9 +59,11 @@ class ReplayDataset(object):
                                                 dtype='uint8')
             self.fp.create_dataset("action", (dset_size,), dtype='uint8')
             self.fp.create_dataset("reward", (dset_size,), dtype='int16')
+            self.fp.create_dataset("non_terminal", (dset_size,), dtype=bool)
 
             self.action = np.empty(dset_size, dtype=np.uint8)
             self.reward = np.empty(dset_size, dtype=np.int16)
+            self.non_terminal = np.empty(dset_size, dtype=bool)
 
             self.state.attrs['head'] = 0
             self.state.attrs['valid'] = 0
@@ -67,11 +82,19 @@ class ReplayDataset(object):
         received 'reward' and *then* ended up in 'state.' The original state
         is presumed to be the state at index (head - 1)
 
-        Question: How do we deal with end of game boundary?
+        Args:
+            action:  index of the action chosen
+            reward:  integer value of reward, positive or negative
+            state:   a numpy array of shape NUM_FRAMES x WIDTH x HEIGHT
+                     or None if this action ended the game.
         """
         self.action[self.head] = action
         self.reward[self.head] = reward
-        self.state[self.head] = state
+        if state is not None:
+            self.state[self.head] = state
+            self.non_terminal[self.head] = True
+        else:
+            self.non_terminal[self.head] = False
 
         # Update head pointer and valid pointer
         self.head = (self.head + 1) % self.dset_size
@@ -118,10 +141,17 @@ class ReplayDataset(object):
         else:
             next_states = self.state[next_idx]
 
-        return (self.state[idx], self.action[next_idx],
-                self.reward[next_idx], next_states)
+        is_non_terminal = np.arrays([not self.is_terminal(idx)
+                                     for idx in next_idx], dtype=bool)
 
-    def sample_direct(self, state, action, reward, next_state, sample_size):
+        return (self.state[idx],
+                self.action[next_idx],
+                self.reward[next_idx],
+                next_states,
+                self.non_terminal[next_idx])
+
+    def sample_direct(self, state, action, reward, next_state,
+                      non_terminal, sample_size):
         """ Same as sample() but writes data directly to argument arrays. """
         if sample_size >= self.valid:
             raise ValueError(
@@ -147,15 +177,22 @@ class ReplayDataset(object):
             self.state.read_direct(next_state, np.s_[next_idx])
 
         self.state.read_direct(state, np.s_[idx])
+
+        # Reward
         reward.flat[:] = self.reward[next_idx]
 
+        # Action
         if action.shape[1] > 1:  # Using a one-hot representation
             action[:] = 0
             action[xrange(sample_size), self.action[next_idx]] = 1
         else:
             action[:] = self.action[next_idx]
 
+        # Check if any of our states are TERMINAL states
+        non_terminal.flat[:] = self.non_terminal[next_idx]
+
     def __del__(self):
+        self.fp['non_terminal'][:] = self.non_terminal
         self.fp['action'][:] = self.action
         self.fp['reward'][:] = self.reward
         self.state.attrs['head'] = self.head
