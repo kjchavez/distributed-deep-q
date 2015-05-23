@@ -84,9 +84,10 @@ We could also add caffe.zip for --py-files in aws.  But in a local setting it's 
 - ~~[PARAM-SERVER] Add functionality to periodically save a snapshot of the model.~~
 - ~~[PARAM-SERVER] Decide when to send a new "target" model (known as P in the .prototxt)~~
 - ~~[UTILS] Implement script to evaluate the policy implied by a saved model. (i.e. Use model to play game many times and compute average score)~~
-- [EVALUATION] Update evaluation.py to also compute ratio of gradients to parameters.
-- [MONITORING] Add appropriate training metrics to the monitoring dashboard
+- [SERVER] Fill in the TODO functions in server.py that compute variance of gradients and ratio of weights to updates for each parameter
+- [MONITORING] Add display of the metrics from the previous point to the babysitting dashboard.
 - [PARAM-SERVER] Profile, profile, profile.
+- [BARISTA] Profile, profile, profile. The bottleneck should be the caffe computation.
 
 ### Lower Priority
 - [SPARK] Implement wrapper class(es) for easy use from within Spark.
