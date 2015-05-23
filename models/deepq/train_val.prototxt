@@ -12,7 +12,7 @@ layers {
   }
 }
 layers {
-  name: "next_state"
+  name: "next_state-non_terminal"
   type: MEMORY_DATA
   top: "next_state"
   top: "non_terminal"

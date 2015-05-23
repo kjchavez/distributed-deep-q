@@ -125,6 +125,7 @@ def special_update_transform_model(model):
 # ============================================================================
 # ** See http://cs231n.github.io/neural-networks-3/#baby for more information.
 
+
 # TODO: Compute ratio of parameter weights to *updates* (not gradients,
 # but the actual updates)
 def compute_parameter_to_update_ratio(model, updateParams):
@@ -133,12 +134,16 @@ def compute_parameter_to_update_ratio(model, updateParams):
     raise NotImplementedError()
 
 
-# TODO: Compute variance of activations and gradients for each layer
+# TODO: Compute variance of gradients for each layer
 # of the network
 def compute_layer_variances(model, updateParams):
     """ Strongly suggest passing in a model that is a standard Python
     dict and not a redisC Dict. """
     raise NotImplementedError()
+
+# TODO: Consider if it's worth it to compute variance of activations for
+# each layer. This information is ONLY available on the worker machines,
+# so it's significantly more trouble than these other metrics.
 
 
 @app.route("/")
