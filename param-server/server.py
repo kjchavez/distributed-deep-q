@@ -120,16 +120,24 @@ def special_update_transform_model(model):
     model.update(updates)
     return model
 
+# ============================================================================
+#                 STATS for "babysitting" the learning process.
+# ============================================================================
+# ** See http://cs231n.github.io/neural-networks-3/#baby for more information.
 
 # TODO: Compute ratio of parameter weights to *updates* (not gradients,
 # but the actual updates)
 def compute_parameter_to_update_ratio(model, updateParams):
+    """ Strongly suggest passing in a model that is a standard Python
+    dict and not a redisC Dict. """
     raise NotImplementedError()
 
 
 # TODO: Compute variance of activations and gradients for each layer
 # of the network
 def compute_layer_variances(model, updateParams):
+    """ Strongly suggest passing in a model that is a standard Python
+    dict and not a redisC Dict. """
     raise NotImplementedError()
 
 
