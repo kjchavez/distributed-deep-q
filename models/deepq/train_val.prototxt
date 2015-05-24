@@ -12,10 +12,10 @@ layers {
   }
 }
 layers {
-  name: "next_state"
+  name: "next_state-non_terminal"
   type: MEMORY_DATA
   top: "next_state"
-  top: "null2"
+  top: "non_terminal"
   memory_data_param: {
     batch_size: 32
     channels: 4
@@ -450,6 +450,16 @@ layers {
   top: "P_sa"
   eltwise_param {
     operation: MAX
+  }
+}
+layers {
+  name: "P_sa_or_term"
+  type: ELTWISE
+  bottom: "P_sa"
+  bottom: "non_terminal"
+  top: "P_sa"
+  eltwise_param {
+    operation: PROD
   }
 }
 layers {

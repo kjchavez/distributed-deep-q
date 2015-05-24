@@ -13,6 +13,7 @@ MODEL_NAME = "centralModel"
 # Global settings, only set once, when the server is started
 redisInstance = None
 snapshot_frequency = None
+stats_frequency = None
 special_update_period = 2
 learning_rate = 0.0
 rmsprop_decay = 0.9
@@ -119,6 +120,31 @@ def special_update_transform_model(model):
     model.update(updates)
     return model
 
+# ============================================================================
+#                 STATS for "babysitting" the learning process.
+# ============================================================================
+# ** See http://cs231n.github.io/neural-networks-3/#baby for more information.
+# ** Should these statistics be saved to Redis or to file?
+
+# TODO: Compute ratio of parameter weights to *updates* (not gradients,
+# but the actual updates)
+def compute_parameter_to_update_ratio(model, updateParams):
+    """ Strongly suggest passing in a model that is a standard Python
+    dict and not a redisC Dict. """
+    raise NotImplementedError()
+
+
+# TODO: Compute variance of gradients for each layer
+# of the network
+def compute_layer_variances(model, updateParams):
+    """ Strongly suggest passing in a model that is a standard Python
+    dict and not a redisC Dict. """
+    raise NotImplementedError()
+
+# TODO: Consider if it's worth it to compute variance of activations for
+# each layer. This information is ONLY available on the worker machines,
+# so it's significantly more trouble than these other metrics.
+
 
 @app.route("/")
 def hello():
@@ -158,6 +184,10 @@ def update_params():
     # print "Grad. Qconv1 norm", np.linalg.norm(updateParams['Qconv1'][0])
     redisInstance.incr("iteration")
     iteration = int(redisInstance.get("iteration"))
+
+    if iteration % stats_frequency == 0:
+        print "Monitoring stats not implemented."
+
     print "Iteration", iteration
     update_fn(updateParams)
 
@@ -230,11 +260,18 @@ def get_args():
                         help="Number of iterations between snapshots")
     parser.add_argument("--special-update", type=int, default=10,
                         help="Number of iterations between special updates")
-    parser.add_argument("--profile", action="store_true")
+    parser.add_argument("--stats-freq", type=int, default=500,
+                        help="Record stats to monitor learning process every"
+                        " this many iterations")
+    parser.add_argument("--profile", action="store_true",
+                        help="Print profiling stats per request")
 
     args = parser.parse_args()
     return args
 
+
+def init_global_settings(settings):
+    raise NotImplementedError("This still happens at global scope level")
 
 if __name__ == "__main__":
     args = get_args()
@@ -243,6 +280,7 @@ if __name__ == "__main__":
     learning_rate = args.lr
     snapshot_frequency = args.snapshot_freq
     special_update_period = args.special_update
+    stats_frequency = args.stats_freq
     if args.update == "sgd":
         update_fn = sgd_update
     elif args.update == "rmsprop":
