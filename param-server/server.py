@@ -7,7 +7,7 @@ import argparse
 from caffe import SGDSolver
 from werkzeug.contrib.profiler import ProfilerMiddleware
 import tasks
-import pdb
+from threading import Lock
 
 # Constants
 MODEL_NAME = "centralModel"
@@ -20,6 +20,8 @@ special_update_period = 2
 learning_rate = 0.0
 rmsprop_decay = 0.9
 update_fn = None
+centralModel = {}
+modelLock = Lock()
 
 app = Flask(__name__)
 
@@ -44,23 +46,22 @@ def apply_descent(model_name, updates, weight=1, scale=None, fn=lambda x: x):
     """
     iteration = int(redisInstance.get("iteration"))
 
-    model = redisC.Dict(key=model_name, redis=redisInstance)
-    prev_model = dict(model)
+    prev_model = dict(centralModel)
 
-    if scale is None:
-        for key in updates:
-            model[key] = [prev_model[key][i] - weight*updates[key][i]
-                          for i in range(len(updates[key]))]
-    else:
-        for key in updates:
-            model[key] = [prev_model[key][i] - weight*updates[key][i]/fn(scale[key][i])
-                          for i in range(len(updates[key]))]
+    with modelLock:
+        if scale is None:
+            for key in updates:
+                centralModel[key] = [prev_model[key][i] - weight*updates[key][i]
+                              for i in range(len(updates[key]))]
+        else:
+            for key in updates:
+                centralModel[key] = [prev_model[key][i] - weight*updates[key][i]/fn(scale[key][i])
+                              for i in range(len(updates[key]))]
 
-    pdb.set_trace()
-    if iteration % snapshot_frequency == 0:
-        print "sending snapshot params to task queue"
-        snapshot_name = get_snapshot_name(iteration)
-        tasks.saveSnapshot.delay(snapshot_name, dict(model))
+        if iteration % snapshot_frequency == 0:
+            print "sending snapshot params to task queue"
+            snapshot_name = get_snapshot_name(iteration)
+            tasks.saveSnapshot.delay(snapshot_name, centralModel)
 
 
 
@@ -167,16 +168,15 @@ def get_current_data():
 @app.route('/api/v1/latest_model', methods=['GET'])
 def get_model_params():
     iteration = int(redisInstance.get("iteration"))
-    model = dict(redisC.Dict(key=MODEL_NAME))
     # print "Qconv1 norm", np.linalg.norm(model['Qconv1'][0])
     # TODO: Eliminate data duplication for improved efficiency
 
-    if iteration % special_update_period == 0:
-        special_update_transform_model(model)
+    with modelLock:
+        if iteration % special_update_period == 0:
+            special_update_transform_model(centralModel)
 
-    print "Parameters sent:", ", ".join(model.keys())
-    m = messaging.create_message(model, compress=False)
-    # pdb.set_trace()
+        print "Parameters sent:", ", ".join(centralModel.keys())
+        m = messaging.create_message(centralModel, compress=False)
     return Response(m, status=200)
 
 
@@ -198,15 +198,13 @@ def update_params():
 
 @app.route('/api/v1/clear_model', methods=['GET'])
 def clear_params():
-    model = redisC.Dict(key=MODEL_NAME)
-    model.clear()
+    centralModel.clear()
     return Response("Cleared", status=200)
 
 
 def initParams(solver_filename, reset=True):
     global redisInstance
     redisInstance = Redis(host='localhost', port=6379, db=0)
-    model = redisC.Dict(redis=redisInstance, key=MODEL_NAME)
     rmsprop = redisC.Dict(redis=redisInstance, key="rmsprop")
     adagrad = redisC.Dict(redis=redisInstance, key="adagrad")
     averageReward = redisC.Dict(redis=redisInstance, key="averageReward")
@@ -217,7 +215,7 @@ def initParams(solver_filename, reset=True):
             snapshot = redisC.Dict(redis=redisInstance, key=name)
             snapshot.clear()
 
-        model.clear()
+        centralModel.clear()
         rmsprop.clear()
         adagrad.clear()
         redisInstance.set("iteration", 0)
@@ -231,19 +229,19 @@ def initParams(solver_filename, reset=True):
                 init = []
                 for i in range(len(parameters)):
                     init.append(np.array(parameters[i].data, dtype='float32'))
-                model[name] = init
+                centralModel[name] = init
 
         print
         print "[Redis Collection]: Initialized the following parameters:"
-        for key in model.keys():
-            print "  - " + key + ' (%d parameters)' % len(model[key])
+        for key in centralModel.keys():
+            print "  - " + key + ' (%d parameters)' % len(centralModel[key])
 
     else:
         solver = SGDSolver(solver_filename,)
         for name in solver.net.params:
             parameters = solver.net.params[name]
-            assert(name in model.keys() and
-                   len(model[name]) == len(parameters) and
+            assert(name in centralModel.keys() and
+                   len(centralModel[name]) == len(parameters) and
                    "Model in Redis database does not match specified solver.")
 
 
