@@ -6,6 +6,8 @@ import numpy as np
 import argparse
 from caffe import SGDSolver
 from werkzeug.contrib.profiler import ProfilerMiddleware
+import tasks
+import pdb
 
 # Constants
 MODEL_NAME = "centralModel"
@@ -54,12 +56,12 @@ def apply_descent(model_name, updates, weight=1, scale=None, fn=lambda x: x):
             model[key] = [prev_model[key][i] - weight*updates[key][i]/fn(scale[key][i])
                           for i in range(len(updates[key]))]
 
+    pdb.set_trace()
     if iteration % snapshot_frequency == 0:
+        print "sending snapshot params to task queue"
         snapshot_name = get_snapshot_name(iteration)
-        snapshot = redisC.Dict(key=snapshot_name)
-        for key in model:
-            snapshot[key] = model[key]
-        print "[SNAPSHOT] Model snapshot saved:", snapshot_name
+        tasks.saveSnapshot.delay(snapshot_name, dict(model))
+
 
 
 def sgd_update(updateParams):
@@ -207,6 +209,7 @@ def initParams(solver_filename, reset=True):
     model = redisC.Dict(redis=redisInstance, key=MODEL_NAME)
     rmsprop = redisC.Dict(redis=redisInstance, key="rmsprop")
     adagrad = redisC.Dict(redis=redisInstance, key="adagrad")
+    averageReward = redisC.Dict(redis=redisInstance, key="averageReward")
 
     if reset:
         # Remove all previously saved snapshots from redis
