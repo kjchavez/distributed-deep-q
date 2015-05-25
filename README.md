@@ -10,17 +10,32 @@ If you cloned the project with the --recursive flag, all of the Caffe source fil
 
 Then follow the instructions at [http://caffe.berkeleyvision.org/installation.html](http://caffe.berkeleyvision.org/installation.html) to build Caffe and pycaffe.
 
+### Installing Redis, and Celery
+Redis is a nosql db and Celery is a task scheduling queue for executing jobs in different threads.
+
+    pip install -U celery[redis]
+
+### redis_collections
+This module is used for storing dictionary objects in redis for Python
+
+    pip install redis_collections
+
 ## Local Testing
 ### Without Spark
-Start a Redis server instance.
+[In a separate termial]Start a Redis server instance.
 
     redis-server
 
-Fire up the parameter server.
+[In a separate termial]Spawn Celery worker
+
+    cd param_server
+    celery -A tasks worker --loglevel=info
+
+[In a separate termial]Fire up the parameter server.
 
     python param-server/server.py models/deepq/solver.prototxt --reset
 
-In a separate terminal, start the Barista application with
+[In a separate termial]Start the Barista application with
 
     python main.py models/deepq/train_val.prototxt models/deepq/deepq16.caffemodel [--debug]
 
@@ -33,6 +48,11 @@ The debug flag is optional; it will print some information about the parameter a
 Each worker machine must have Caffe installed (preferably in the same location) for Distributed Deep Q to work properly. Alternatively, if your workers are sufficiently homogenous, you can build the distribution version of Caffe on the driver, and send this to the workers when submitting the job.
 
 In any case, be sure that each worker's PYTHONPATH includes the *caffe/python* directory. The driver should also have a proper Caffe installation.
+
+Start Celery worker in a seperate terminal, 
+
+    cd param_server
+    celery -A tasks worker --loglevel=info
 
 Fire up the redis and parameter servers,
 
