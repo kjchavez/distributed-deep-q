@@ -56,7 +56,7 @@ def get_args():
     parser.add_argument("--num-trials", '-n', dest="num_trials",
                         type=int, default=32)
     parser.add_argument("--model-pattern", '-m', dest="pattern",
-                        default="centralModel*")
+                        default="centralModel-*")
 
     return parser.parse_args()
 
