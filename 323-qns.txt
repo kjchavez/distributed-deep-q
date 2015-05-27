@@ -1,0 +1,29 @@
+1) How are you representing your data in a distributed dataset?
+
+We're not. The data we have for training is the experience tuples generated from playing the games mentioned in the slides. The dataset is generated real-time, and it's embarassingly parallel because we want to draw independent random samples for each machine for RL. We don't really worry about fault tolerance, because 1) each machine can generate lots of samples very quickly to replace the lost data when restarted (orders of magnitude faster than training), and 2) other workers have their own independent datasets. The dataset will be different because it uses the latest policy, but since we are interested in running on samples that are based on a more recent underlying distribution (as defined by the latest policy) it's actually better (we remove the older samples when our dataset size is reached).
+
+2) On which dimensions of your problem does your algorithm scale?
+
+Scales very well with data (number of data points, not dimensions, which is a model thing), since we don't actually send any data around. The dataset lives on the local machine. Can train on more data by having more workers, but this is upper-bounded by parameter update time on parameter server based on our current architecture. For instance, if our parameter server update takes 2 ms, then we can only do up to 500 updates per second. Future work can include parameter servers that compute and scale the updates in a distributed fashion. 
+
+Scales with model according to the complexity of the convolutional neural network, since compute time is bounded by the backpropagation step during training (latency). See photo on iphone for complexity... But notice that the larger the model gets, the more the computation time for training dominates the communication time... 
+
+TODO: Explore trade-off between communication and computation times
+
+3) How far off optimal is your distributed algorithm from the best single-machine version?
+
+Optimal over number of workers? 
+
+No given same number of iterations with the same minibatch size, because each worker generates samples from stale models. 
+
+TODO: Think about what this really mean a little more. Ask Reza about metrics in class.
+
+4) How much communication happens? (analyze or measure)
+
+Analyze and measure! Per update, O(P) with P being number parameters, which is in turn dependent on the CNN model complexity. 
+
+TODO: Measure times as you vary frame size (as a proxy for model complexity)
+
+5) What type of communication patterns are happening? (one-to-all, all-to-all, none, ...)
+
+One-to-all, all-to-one, but asynchronous for every minibatch (like asynchronous all-reduce over and over again)
