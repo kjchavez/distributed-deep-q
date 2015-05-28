@@ -103,7 +103,7 @@ We could also add caffe.zip for --py-files in aws.  But in a local setting it's 
 - Plot average reward in real time.
 
 ### High Priority
-- ~~[PARAM-SERVER] Optimize. Spending 240 milliseconds pickling data per gradient update. In that much time, we might as well compute a gradient on a single machine! ~~
+- ~~[PARAM-SERVER] Optimize. Spending 240 milliseconds pickling data per gradient update. In that much time, we might as well compute a gradient on a single machine!~~
 - [AWS] Figure out how to run our pipeline on AWS.
 - [PARAM-SERVER] Reject gradient updates if too stale. (Or, I have a better idea! It's like adagrad for asynchronous updates. Need to work out details rigorously, but basic idea is that you have an adaptive scaling that is inversely proportional to the deviation in the parameter value from when you used it to what it is now. Takes up extra O(K*D) space on the driver where K is the number of machines and D is the size of the model. Takes an extra O(D) time to compute an update. Proof of effectiveness seems like it would involve a Lipschitz constant.)
 - ~~[CORRECTNESS] Deal with END-OF-GAME loss function. It's slightly different. See paper.~~
