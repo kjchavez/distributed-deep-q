@@ -1,0 +1,9 @@
+SOLVER = '/home/auhong/distributed-deep-q/models/deepq/solver.prototxt'
+RESET = True
+UPDATE_FN = 'rmsprop'
+LR = 1e-4
+RMSPROP_DECAY = 0.9
+SNAPSHOT_FREQ = 500
+SPECIAL_UPDATE = 10
+STATS_FREQ = 500
+PROFILE = True
