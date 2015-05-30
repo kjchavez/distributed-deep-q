@@ -1,0 +1,5 @@
+Image Size, Message Size (MB), Time to Generate (ms), Time to Load (ms), To Compute Gradient (ms), Number of Parameters
+16, 0.91, 1.97, 0.93, 81.7, 228132
+32, 2.49, 4.18, 2.05, 252.8, 621348
+64, 8.78, 8.55, 5.11, 981.5, 2194212
+128, 33.94, 27.47, 18.99, 4044, 8484668
