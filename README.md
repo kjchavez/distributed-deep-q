@@ -96,9 +96,15 @@ We could also add caffe.zip for --py-files in aws.  But in a local setting it's 
     Then try spark-submitting again. If the status is TIME_WAIT, just wait a bit and call netstat again. 
 
 ## TODOs
+
 ### High Priority
-- **[PARAM-SERVER] Optimize. Spending 240 milliseconds pickling data per gradient update. In that much time, we might as well compute a gradient on a single machine!**
-- [AWS] Figure out how to run our pipeline on AWS.
+- upgrade param server to use unicorn(faster request processing) {AUGUSTUS}
+- Run experiment to get run time with different image size input. {AUGUSTUS, KEVIN}
+- Plot average reward in real time. {AUGUSTUS}
+- [PRESENTATION] Conceptual bits for slides {HAO YI}
+- [DATA] Measure communication cost for different image size input {KEVIN}
+- [REPORT] Everything...
+- ~~[PARAM-SERVER] Optimize. Spending 240 milliseconds pickling data per gradient update. In that much time, we might as well compute a gradient on a single machine!~~
 - [PARAM-SERVER] Reject gradient updates if too stale. (Or, I have a better idea! It's like adagrad for asynchronous updates. Need to work out details rigorously, but basic idea is that you have an adaptive scaling that is inversely proportional to the deviation in the parameter value from when you used it to what it is now. Takes up extra O(K*D) space on the driver where K is the number of machines and D is the size of the model. Takes an extra O(D) time to compute an update. Proof of effectiveness seems like it would involve a Lipschitz constant.)
 - ~~[CORRECTNESS] Deal with END-OF-GAME loss function. It's slightly different. See paper.~~
 - ~~[PARAM-SERVER] Add functionality to periodically save a snapshot of the model.~~
@@ -115,6 +121,7 @@ We could also add caffe.zip for --py-files in aws.  But in a local setting it's 
 - [BARISTA] Remove Barista's dependence on a .caffemodel argument in the initializer. It should be able to start directly from a solver.prototxt.
 - [MONITORING] Visualize weights for first layer filters.
 - [DDQ] Test a *single-process* version of the ddq application by spawning a Barista object inside the **train_partition** function, rather than using Popen. (Tried this, it broke)
+- [AWS] Figure out how to run our pipeline on AWS. (Problems installing Spark, will work on this after slides if time permits.)
 
 ## Open Questions
 - AWS? [https://github.com/BVLC/caffe/wiki/Caffe-on-EC2-Ubuntu-14.04-Cuda-7](https://github.com/BVLC/caffe/wiki/Caffe-on-EC2-Ubuntu-14.04-Cuda-7)

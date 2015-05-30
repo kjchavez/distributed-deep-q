@@ -20,8 +20,17 @@ special_update_period = 2
 learning_rate = 0.0
 rmsprop_decay = 0.9
 update_fn = None
+# central model
 centralModel = {}
 modelLock = Lock()
+# rmsprop dictionary
+rmsprop = {}
+rmspropLock = Lock()
+
+# adagrad dictionary
+adagrad = {}
+adagradLock = Lock()
+
 
 app = Flask(__name__)
 
@@ -72,20 +81,20 @@ def sgd_update(updateParams):
 
 def rmsprop_update(updateParams):
     print "[RMSPROP UPDATE]"
-    rmsprop = redisC.Dict(key="rmsprop", redis=redisInstance)
-    d_rmsprop = dict(rmsprop)
-    if not rmsprop:
-        for k in updateParams:
-            params = []
-            for i in range(len(updateParams[k])):
-                params.append(updateParams[k][i]**2)
-            rmsprop[k] = params
-            d_rmsprop = dict(rmsprop)
-    else:
-        for k in updateParams:
-            rmsprop[k] = [rmsprop_decay * d_rmsprop[k][i] +
-                          (1-rmsprop_decay) * updateParams[k][i]**2
-                          for i in range(len(updateParams[k]))]
+    with rmspropLock:
+        d_rmsprop = dict(rmsprop)
+        if not rmsprop:
+            for k in updateParams:
+                params = []
+                for i in range(len(updateParams[k])):
+                    params.append(updateParams[k][i]**2)
+                rmsprop[k] = params
+                d_rmsprop = dict(rmsprop)
+        else:
+            for k in updateParams:
+                rmsprop[k] = [rmsprop_decay * d_rmsprop[k][i] +
+                              (1-rmsprop_decay) * updateParams[k][i]**2
+                              for i in range(len(updateParams[k]))]
 
     apply_descent("centralModel", updateParams,
                   weight=learning_rate, scale=d_rmsprop,
@@ -94,17 +103,17 @@ def rmsprop_update(updateParams):
 
 def adagrad_update(updateParams):
     print "[ADAGRAD UPDATE]"
-    adagrad = redisC.Dict(key="adagrad")
-    if not adagrad:
-        for k in updateParams:
-            params = []
-            for i in range(len(updateParams[k])):
-                params.append(updateParams[k][i]**2)
-            adagrad[k] = params
-    else:
-        for k in updateParams:
-            adagrad[k] = [adagrad[k][i] + updateParams[k][i]**2
-                          for i in range(len(updateParams[k]))]
+    with adagradLock:
+        if not adagrad:
+            for k in updateParams:
+                params = []
+                for i in range(len(updateParams[k])):
+                    params.append(updateParams[k][i]**2)
+                adagrad[k] = params
+        else:
+            for k in updateParams:
+                adagrad[k] = [adagrad[k][i] + updateParams[k][i]**2
+                              for i in range(len(updateParams[k]))]
 
     apply_descent(MODEL_NAME, updateParams,
                   weight=learning_rate, scale=adagrad,
@@ -205,8 +214,6 @@ def clear_params():
 def initParams(solver_filename, reset=True):
     global redisInstance
     redisInstance = Redis(host='localhost', port=6379, db=0)
-    rmsprop = redisC.Dict(redis=redisInstance, key="rmsprop")
-    adagrad = redisC.Dict(redis=redisInstance, key="adagrad")
     averageReward = redisC.Dict(redis=redisInstance, key="averageReward")
 
     if reset:
