@@ -16,7 +16,7 @@ Optimal over number of workers?
 
 No given same number of iterations with the same minibatch size, because each worker generates samples from stale models. 
 
-TODO: Think about what this really mean a little more. Ask Reza about metrics in class.
+For metrics, Reza said compare performance for how many iterations required by serial vs parallel algorithms; use "strength"? average reward of parallel over serial after fixed time or number of rounds (serial = 1 per round, parallel = #workers per round)
 
 4) How much communication happens? (analyze or measure)
 
