@@ -8,17 +8,21 @@ from caffe import SGDSolver
 from werkzeug.contrib.profiler import ProfilerMiddleware
 import tasks
 from threading import Lock
+import config
+
+app = Flask(__name__)
+app.config.from_object(config)
 
 # Constants
 MODEL_NAME = "centralModel"
 
 # Global settings, only set once, when the server is started
 redisInstance = None
-snapshot_frequency = None
-stats_frequency = None
-special_update_period = 2
-learning_rate = 0.0
-rmsprop_decay = 0.9
+snapshot_frequency = app.config['SNAPSHOT_FREQ']
+stats_frequency = app.config['STATS_FREQ']
+special_update_period = app.config['SPECIAL_UPDATE']
+learning_rate = app.config['LR']
+rmsprop_decay = app.config['RMSPROP_DECAY']
 update_fn = None
 # central model
 centralModel = {}
@@ -32,7 +36,7 @@ adagrad = {}
 adagradLock = Lock()
 
 
-app = Flask(__name__)
+
 
 def get_snapshot_name(iteration):
     return MODEL_NAME + "-%06d" % iteration
@@ -215,7 +219,7 @@ def initParams(solver_filename, reset=True):
     global redisInstance
     redisInstance = Redis(host='localhost', port=6379, db=0)
     averageReward = redisC.Dict(redis=redisInstance, key="averageReward")
-
+    
     if reset:
         # Remove all previously saved snapshots from redis
         for name in redisInstance.keys(MODEL_NAME+"-*"):
@@ -252,55 +256,70 @@ def initParams(solver_filename, reset=True):
                    "Model in Redis database does not match specified solver.")
 
 
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("solver", help="Prototxt file defining solver")
-    parser.add_argument("--reset", action="store_true",
-                        help="Start training brand new model")
-    parser.add_argument("--update", choices=['adagrad', 'rmsprop', 'sgd'],
-                        default='rmsprop',
-                        help="Choose type of gradient update")
-    parser.add_argument("--lr", type=float, default=1e-4,
-                        help="Base learning rate for updates")
-    parser.add_argument("--rmsprop_decay", type=float, default=0.9,
-                        help="Decay rate for moving average in RMSProp")
-    parser.add_argument("--snapshot-freq", '-s', type=int, default=500,
-                        help="Number of iterations between snapshots")
-    parser.add_argument("--special-update", type=int, default=10,
-                        help="Number of iterations between special updates")
-    parser.add_argument("--stats-freq", type=int, default=500,
-                        help="Record stats to monitor learning process every"
-                        " this many iterations")
-    parser.add_argument("--profile", action="store_true",
-                        help="Print profiling stats per request")
+# def get_args():
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("solver", help="Prototxt file defining solver")
+#     parser.add_argument("--reset", action="store_true",
+#                         help="Start training brand new model")
+#     parser.add_argument("--update", choices=['adagrad', 'rmsprop', 'sgd'],
+#                         default='rmsprop',
+#                         help="Choose type of gradient update")
+#     parser.add_argument("--lr", type=float, default=1e-4,
+#                         help="Base learning rate for updates")
+#     parser.add_argument("--rmsprop_decay", type=float, default=0.9,
+#                         help="Decay rate for moving average in RMSProp")
+#     parser.add_argument("--snapshot-freq", '-s', type=int, default=500,
+#                         help="Number of iterations between snapshots")
+#     parser.add_argument("--special-update", type=int, default=10,
+#                         help="Number of iterations between special updates")
+#     parser.add_argument("--stats-freq", type=int, default=500,
+#                         help="Record stats to monitor learning process every"
+#                         " this many iterations")
+#     parser.add_argument("--profile", action="store_true",
+#                         help="Print profiling stats per request")
 
-    args = parser.parse_args()
-    return args
+#     args = parser.parse_args()
+#     return args
 
 
 def init_global_settings(settings):
     raise NotImplementedError("This still happens at global scope level")
 
+
+initParams(app.config['SOLVER'], reset=app.config['RESET'])
+
+if app.config['UPDATE_FN'] == "sgd":
+    update_fn = sgd_update
+elif app.config['UPDATE_FN'] == "rmsprop":
+    update_fn = rmsprop_update
+elif app.config['UPDATE_FN'] == "adagrad":
+    update_fn = adagrad_update
+else:
+    print "update function not defined"
+
+if app.config['PROFILE']:
+    app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
+
 if __name__ == "__main__":
-    args = get_args()
+    # args = get_args()
 
-    # Initialize global settings
-    learning_rate = args.lr
-    snapshot_frequency = args.snapshot_freq
-    special_update_period = args.special_update
-    stats_frequency = args.stats_freq
-    if args.update == "sgd":
-        update_fn = sgd_update
-    elif args.update == "rmsprop":
-        update_fn = rmsprop_update
-        rmsprop_decay = args.rmsprop_decay
-    elif args.update == "adagrad":
-        update_fn = adagrad_update
+    # # Initialize global settings
+    # learning_rate = args.lr
+    # snapshot_frequency = args.snapshot_freq
+    # special_update_period = args.special_update
+    # stats_frequency = args.stats_freq
+    # if args.update == "sgd":
+    #     update_fn = sgd_update
+    # elif args.update == "rmsprop":
+    #     update_fn = rmsprop_update
+    #     rmsprop_decay = args.rmsprop_decay
+    # elif args.update == "adagrad":
+    #     update_fn = adagrad_update
 
-    initParams(args.solver, reset=args.reset)
+    # initParams(args.solver, reset=args.reset)
 
-    if args.profile:
-        app.config['PROFILE'] = True
-        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
+    # if args.profile:
+    #     app.config['PROFILE'] = True
+    #     app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
     app.run(debug=True, port=5500)
