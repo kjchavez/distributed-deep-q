@@ -171,7 +171,7 @@ def main():
     exp_gain = ExpGain(net, ['w', 'a', 's', 'd'], preprocessor, game.cpu_play,
                        replay_dataset, game.encode_state())
 
-    for _ in xrange(50):
+    for _ in xrange(min(20000, args.dset_size)):
         exp_gain.generate_experience(1e8)
 
     # Start server loop
