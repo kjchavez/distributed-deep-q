@@ -34,12 +34,12 @@ def recv_all(socket, size):
     return message
 
 
-def process_connection(socket, net, exp_gain, iter_num=1, log_frequency=50):
+def process_connection(socket, net, exp_gain, log_frequency=50):
     print "Processing...",
     message = recv_all(socket, barista.MSG_LENGTH)
     if message == barista.GRAD_UPDATE:
-        exp_gain.generate_experience(iter_num)
-        net.fetch_model()
+        iteration_num = net.fetch_model()
+        exp_gain.generate_experience(iteration_num)
         net.load_minibatch()
         net.full_pass()
         response = net.send_gradient_update()
@@ -58,7 +58,7 @@ def process_connection(socket, net, exp_gain, iter_num=1, log_frequency=50):
     print "done."
 
 
-def debug_process_connection(socket, net, exp_gain, iter_num=1):
+def debug_process_connection(socket, net, exp_gain):
     message = ""
     while len(message) < barista.MSG_LENGTH:
         chunk = socket.recv(4096)
@@ -67,10 +67,11 @@ def debug_process_connection(socket, net, exp_gain, iter_num=1):
         message += chunk
 
     if message == barista.GRAD_UPDATE:
-        exp_gain.generate_experience(iter_num)
-        print "Processing gradient update request:"
         print "- Fetching model..."
-        net.fetch_model()
+        iteration_num = net.fetch_model()
+        print "Processing gradient update request:", iteration_num
+        exp_gain.generate_experience(iteration_num)
+
         print "- Loading minibatch..."
         net.load_minibatch()
 
@@ -131,6 +132,7 @@ def get_args():
     parser.add_argument("--dset-size", dest="dset_size", type=int, default=1000)
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--initial-replay", type=int, default=20000)
 
     args = parser.parse_args()
     if args.driver == "None":
@@ -171,8 +173,9 @@ def main():
     exp_gain = ExpGain(net, ['w', 'a', 's', 'd'], preprocessor, game.cpu_play,
                        replay_dataset, game.encode_state())
 
-    for _ in xrange(min(20000, args.dset_size)):
-        exp_gain.generate_experience(1e8)
+    if(args.overwrite):
+        for _ in xrange(min(args.initial_replay, args.dset_size)):
+            exp_gain.generate_experience(0)
 
     # Start server loop
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

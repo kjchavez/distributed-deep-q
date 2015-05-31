@@ -61,6 +61,23 @@ def get_args():
     return parser.parse_args()
 
 
+def start(architecture_file, model_file, num_trials=32, recompute=False, pattern="centralModel-*"):
+    print "evaluating reward..."
+    redisInstance = Redis(host='localhost', port=6379, db=0)
+    model_keys = redisInstance.keys(pattern)
+    results = redisC.Dict(key="averageReward", redis=redisInstance)
+
+    pe = None
+    for key in model_keys:
+        if key not in results or recompute:
+            if pe is None:
+                pe = PolicyEvaluator(architecture_file, model_file)
+            print "Evaluating model:", key
+            model = dict(redisC.Dict(key=key, redis=redisInstance))
+            avg_reward = pe.evaluate(model, num_trials)
+            results[key] = avg_reward
+            print "Average reward:", avg_reward
+
 def main():
     args = get_args()
     redisInstance = Redis(host='localhost', port=6379, db=0)

@@ -2,11 +2,17 @@ from celery import Celery
 import time
 from redis import Redis
 import redis_collections as redisC
+import evaluation
+
 
 redisURL = "redis://localhost:6379/0"
 redisInstance = Redis(host='localhost', port=6379, db=0)
 
 app = Celery('tasks', broker=redisURL, backend=redisURL)
+
+app.config_from_object('celeryconfig')
+
+
 
 @app.task
 def doSomething(arg):
@@ -22,4 +28,6 @@ def saveSnapshot(snapshot_name, model):
 		snapshot[key] = model[key]
 	print "[SNAPSHOT] Model snapshot saved:", snapshot_name
 
-
+@app.task
+def evaluateReward():
+	evaluation.start(app.conf.ARCHITECTURE_FILE, app.conf.MODEL_FILE, recompute=False)

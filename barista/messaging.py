@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 import barista
 
-def create_message(params, compress=False):
+def create_message(params, iteration_num, compress=False):
     """Consistent method for generating messages based on Caffe net params.
     Args:
         params: dictionary of parameters
@@ -36,7 +36,7 @@ def create_message(params, compress=False):
     if compress:
         data = zlib.compress(data)
 
-    message = struct.pack('i', len(header)) + header + data
+    message = struct.pack('ii', iteration_num, len(header)) + header + data
     return message
 
 
@@ -88,15 +88,16 @@ def load_net_message(message, net, attr, compressed=False):
     """ Loads the data received over the network into a net.
         Note: Assumes data is of type float32, but this can be relaxed.
     """
-    header_size_message = message[0:4]
-    header_size = struct.unpack('i', header_size_message)[0]
-    header_message = message[4:4 + header_size]
+    header_size_message = message[0:8] # header_size_message contains iteration_num and header size
+    iteration_num, header_size = struct.unpack('ii', header_size_message)
+    print "in load_net_message", "iteration_num", iteration_num, "header_size", header_size
+    header_message = message[8:8 + header_size]
     header = cPickle.loads(header_message)
 
     if compressed:
-        data = zlib.decompress(message[4 + header_size:])
+        data = zlib.decompress(message[8 + header_size:])
     else:
-        data = message[4 + header_size:]
+        data = message[8 + header_size:]
 
     idx = 0
     for param in header:
@@ -115,12 +116,13 @@ def load_net_message(message, net, attr, compressed=False):
     if idx != len(data):
         print "Warning: data not entirely consumed (%d / %d bytes used)" \
                % (idx, len(data))
-
+    return iteration_num
 
 def load_model_message(message, net):
     """ Replace net parameters with those contained in message.
     """
-    load_net_message(message, net, "data")
+    iteration_num = load_net_message(message, net, "data")
+    return iteration_num
 
 
 def load_gradient_message(message, compressed=False):

@@ -3,7 +3,7 @@ import random
 from collections import deque
 import scipy.ndimage
 
-_FRAME_LIMIT = 1000000
+_FRAME_LIMIT = 50000
 _EPSILON_MAX = 1.0
 _EPSILON_MIN = 0.1
 _NFRAME = 4

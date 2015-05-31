@@ -32,6 +32,10 @@ adagrad = {}
 adagradLock = Lock()
 
 
+
+
+
+
 app = Flask(__name__)
 
 def get_snapshot_name(iteration):
@@ -185,7 +189,7 @@ def get_model_params():
             special_update_transform_model(centralModel)
 
         print "Parameters sent:", ", ".join(centralModel.keys())
-        m = messaging.create_message(centralModel, compress=False)
+        m = messaging.create_message(centralModel, iteration, compress=False)
     return Response(m, status=200)
 
 
@@ -225,6 +229,7 @@ def initParams(solver_filename, reset=True):
         centralModel.clear()
         rmsprop.clear()
         adagrad.clear()
+        averageReward.clear()
         redisInstance.set("iteration", 0)
 
         # Instantiate model parameters according to initialization

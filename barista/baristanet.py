@@ -93,7 +93,8 @@ class BaristaNet:
                     headers={'Content-Type': 'application/deepQ'})
 
         message = urllib2.urlopen(request).read()
-        load_model_message(message, self.net)
+        iteration_num = load_model_message(message, self.net)
+        return iteration_num
 
     def dummy_fetch_model(self):
         """ Returns a model as if it had been retrieved from network.
