@@ -44,7 +44,7 @@ def train_partition(idx, iterator):
     model = SparkFiles.get("deepq16.caffemodel")
     solver = SparkFiles.get("solver.prototxt")
     root = SparkFiles.getRootDirectory()
-    dset = os.path.join(root, "dset.hdf5")
+    dset = os.path.join(root, "dset-%02d.hdf5" % idx)
 
     flag_file = "flags/__BARISTA_READY__.%d" % port
     if os.path.isfile(flag_file):
@@ -54,6 +54,10 @@ def train_partition(idx, iterator):
     subprocess.Popen(["python", main, architecture, model,
                       "--dataset", dset,
                       "--solver", solver,
+                      "--dset-size", "30000",
+                      "--initial-replay", "20000",
+                      "--debug",
+                      "--overwrite",
                       "--port", str(port)])
 
     while not os.path.isfile(flag_file):
