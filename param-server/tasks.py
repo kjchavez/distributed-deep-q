@@ -37,6 +37,6 @@ def evaluateReward():
 @app.task
 def saveAverageReward():
 	averageReward = redisC.Dict(redis=redisInstance, key='averageReward')
-	filename = "averageReward" + datatime.now()
+	filename = "averageReward" + str(datetime.now())
 	with open(filename, 'wb') as f:
 		pickle.dump(dict(averageReward), f)
