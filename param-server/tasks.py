@@ -28,6 +28,9 @@ def saveSnapshot(snapshot_name, model):
 	snapshot = redisC.Dict(redis=redisInstance,key=snapshot_name)
 	for key in model:
 		snapshot[key] = model[key]
+	filename = snapshot_name + str(datetime.now())
+	with open(filename, 'wb') as f:
+		pickle.dump(dict(model), f)
 	print "[SNAPSHOT] Model snapshot saved:", snapshot_name
 
 @app.task
@@ -36,6 +39,7 @@ def evaluateReward():
 
 @app.task
 def saveAverageReward():
+	print "saving all rewards to disk"
 	averageReward = redisC.Dict(redis=redisInstance, key='averageReward')
 	filename = "averageReward" + str(datetime.now())
 	with open(filename, 'wb') as f:

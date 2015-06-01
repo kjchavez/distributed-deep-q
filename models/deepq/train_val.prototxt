@@ -95,7 +95,7 @@ layers {
     }
     bias_filler {
       type: "constant"
-      value: 1
+      value: 0
     }
   }
 }
@@ -173,7 +173,7 @@ layers {
     }
     bias_filler {
       type: "constant"
-      value: 1
+      value: 0
     }
   }
 }
@@ -269,7 +269,7 @@ layers {
     }
     bias_filler {
       type: "constant"
-      value: 1
+      value: 0
     }
   }
 }
@@ -343,7 +343,7 @@ layers {
     }
     bias_filler {
       type: "constant"
-      value: 1
+      value: 0
     }
   }
 }
