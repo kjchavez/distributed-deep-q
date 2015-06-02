@@ -17,15 +17,6 @@ import h5py
 import numpy as np
 
 
-def view_dset(rdset, frame_rate=25):
-    import cv2
-    for i in xrange(rdset.dset_size):
-        cv2.imshow("Game", rdset.state[i][-1])
-        print rdset.non_terminal[i]
-        if not rdset.non_terminal[i]:
-            print "ENDGAME at idx", i
-        cv2.waitKey(1000/frame_rate)
-
 
 class ReplayDataset(object):
     """ A wrapper around a replay dataset residing on disk as HDF5. """
