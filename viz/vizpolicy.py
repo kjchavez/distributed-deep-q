@@ -69,7 +69,7 @@ def main():
         # Render frame
         frame = gray_scale(exp_gain.sequence[-1].reshape((1,)+exp_gain.sequence[-1].shape))[-1]
 
-        big_frame = cv2.resize(frame, (0,0), fx=4, fy=4, interpolation=cv2.INTER_NEAREST) 
+        big_frame = cv2.resize(frame, (0,0), fx=10, fy=10, interpolation=cv2.INTER_NEAREST) 
         cv2.imwrite(os.path.join(args.output_dir, "frame-%05d.png" % frame_index), big_frame)
         frame_index += 1
         # cv2.imshow("Game", frame)
