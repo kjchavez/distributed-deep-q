@@ -4,6 +4,7 @@ models/*/*.caffemodel
 caffe/*
 flags/
 logs/
+models/deepq/*.prototxt
 
 # Compiled source #
 ###################
