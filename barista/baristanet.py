@@ -132,6 +132,9 @@ class BaristaNet:
 
         return response
 
+    def forward(self, end=None):
+        self.net.forward(end=end)
+
     def full_pass(self):
         self.net.forward()
         self.net.backward()
