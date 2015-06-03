@@ -22,20 +22,20 @@ This module is used for storing dictionary objects in redis for Python
 
 ## Local Testing
 ### Without Spark
-[In a separate termial]Start a Redis server instance.
+[In a separate terminal] Start a Redis server instance.
 
     redis-server
 
-[In a separate termial]Spawn Celery worker
+[In a separate terminal] Spawn Celery worker
 
     cd param_server
     celery -A tasks worker --loglevel=info
 
-[In a separate termial]Fire up the parameter server.
+[In a separate terminal] Fire up the parameter server.
 
     python param-server/server.py models/deepq/solver.prototxt --reset
 
-[In a separate termial]Start the Barista application with
+[In a separate terminal] Start the Barista application with
 
     python main.py models/deepq/train_val.prototxt models/deepq/deepq16.caffemodel [--debug]
 
