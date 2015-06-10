@@ -1,7 +1,7 @@
 # Distributed Deep Q Learning
 
 ## Getting Started
-A slight out-of-date version of Caffe is included as a submodule in this project, with a few modifications to the pycaffe interface. The easiest way to get up and running with Distributed Deep Q is to use this submodule.
+A slightly out-of-date version of Caffe is included as a submodule in this project, with a few modifications to the pycaffe interface. The easiest way to get up and running with Distributed Deep Q is to use this submodule.
 
 ### Using the submodule
 If you cloned the project with the --recursive flag, all of the Caffe source files should be in the **caffe** sub-directory. Otherwise, it'll be empty and you should do the following:
