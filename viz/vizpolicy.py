@@ -1,5 +1,6 @@
 import argparse
 import cPickle
+import random
 import os
 from barista import baristanet
 from barista import netutils
@@ -36,8 +37,8 @@ def main():
     bnet = baristanet.BaristaNet(args.architecture, args.model, None)
 
     # load parameters from checkpoint into the model
-    # params = load_saved_checkpoint(args.checkpoint)
-    # netutils.set_net_params(bnet.net, params)
+    params = load_saved_checkpoint(args.checkpoint)
+    netutils.set_net_params(bnet.net, params)
 
     # Initialize game player
     replay_dataset = ReplayDataset("temp-dset.hdf5", bnet.state[0].shape,
